@@ -1,0 +1,6 @@
+# Raw telemetry can contain sensitive content: keep it out of git. Summaries live in tickets/*/run-*/metrics/.
+otel-dump/*
+!otel-dump/.gitkeep
+__pycache__/
+*.pyc
+config/repos.local.yaml

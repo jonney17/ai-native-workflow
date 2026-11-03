@@ -1,0 +1,2 @@
+# Normalize line endings so files look the same on Windows, macOS and Linux.
+* text=auto eol=lf
