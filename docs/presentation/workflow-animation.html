@@ -20,9 +20,17 @@ html,body{height:100%;background:#05060d;color:var(--text);font-family:Inter,"Se
 #controls{display:flex;align-items:center;gap:14px;padding:10px 16px;background:#0a0c18;border-top:1px solid #1b2040;font-size:14px;color:var(--mute)}
 #controls button{background:#1a1f3a;color:var(--text);border:1px solid #2b3358;border-radius:8px;padding:6px 12px;cursor:pointer;font:inherit}
 #controls button:hover{background:#242b52}
-#scrub{flex:1;min-width:120px;accent-color:var(--blue)}
+#scrubWrap{position:relative;flex:1;min-width:120px;display:flex;align-items:center}
+#scrub{width:100%;accent-color:var(--blue)}
+.tick{position:absolute;top:50%;margin-top:-13px;width:2px;height:8px;background:var(--amber);pointer-events:none;opacity:.7}
+.tick.major{height:12px;margin-top:-15px;width:3px;opacity:1}
+#bpMsg{color:var(--amber);font-weight:600;white-space:nowrap}
+#bpBtn.off{opacity:.55}
 #time{font-variant-numeric:tabular-nums;min-width:96px;text-align:right}
-#chips{display:flex;gap:6px;flex-wrap:wrap}
+#controls{flex-wrap:wrap;row-gap:8px}
+#controls button{white-space:nowrap}
+#scrubWrap{min-width:240px}
+#chips{display:flex;gap:6px;flex-wrap:wrap;flex-basis:100%}
 #chips button.on{background:var(--blue);color:#05101f;border-color:var(--blue)}
 .abs{position:absolute}
 .h1{font-size:92px;font-weight:800;letter-spacing:-2px;line-height:1.05}
@@ -44,9 +52,11 @@ html,body{height:100%;background:#05060d;color:var(--text);font-family:Inter,"Se
   <div id="controls">
     <button id="play" title="Space">Pause</button>
     <button id="restart" title="Home">Restart</button>
-    <input id="scrub" type="range" min="0" max="1" value="0">
+    <div id="scrubWrap"><input id="scrub" type="range" min="0" max="1" value="0"></div>
     <span id="time">0:00 / 0:00</span>
     <button id="speed" title="Playback speed">1x</button>
+    <button id="bpBtn" title="B: turn breakpoints on or off">Breakpoints: on</button>
+    <span id="bpMsg"></span>
     <div id="chips"></div>
   </div>
 </div>
@@ -54,7 +64,8 @@ html,body{height:100%;background:#05060d;color:var(--text);font-family:Inter,"Se
 /* Frame-driven animation in the style of Remotion: one pure function render(frame) draws the whole picture.
    30 fps, 1920x1080. Nothing depends on the clock, so any frame can be shown or exported.
    URL options: ?frame=N (start paused at frame N)  ?controls=0 (hide the bar)  ?autoplay=0
-   Keys: Space play/pause, Left/Right 1 s (Shift 5 s), Home restart. */
+   Breakpoints: it pauses after every scene and every demo step. ?breakpoints=0 turns them off.
+   Keys: Space play/pause, Left/Right 1 s (Shift 5 s), PageDown/PageUp next/previous section, B breakpoints, Home restart. */
 const FPS = 30;
 const SCENES = [
   {id:'title', name:'Title', d:120},
@@ -68,6 +79,25 @@ const SCENES = [
 ];
 let acc = 0; SCENES.forEach(s => { s.start = acc; acc += s.d; });
 const TOTAL = acc;
+
+/* Breakpoints: playback pauses by itself when a section has finished animating, so you can talk before
+   moving on. One after every scene, and one after every demo step. Space continues.
+   Sections (for PageUp/PageDown): the start of every scene and every demo step. */
+const BPS = [], SECTIONS = [];
+SCENES.forEach((s,i)=>{
+  const last = i === SCENES.length-1;
+  if(s.id === 'demo'){
+    SECTIONS.push(s.start);
+    BPS.push({f:s.start+89, major:false});                          // end of the setup intro
+    for(let k=1;k<=13;k++){
+      SECTIONS.push(s.start+90+(k-1)*150);
+      BPS.push({f: k===13 ? s.start+s.d-12 : s.start+90+k*150-1, major: k===13});
+    }
+  } else {
+    SECTIONS.push(s.start);
+    if(!last) BPS.push({f:s.start+s.d-12, major:true});            // just before the fade-out
+  }
+});
 
 const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
 const ease=t=>1-Math.pow(1-t,3);
@@ -363,10 +393,17 @@ function render(frame){
 const stage = document.getElementById('stage'), viewport = document.getElementById('viewport');
 const scrub = document.getElementById('scrub'), timeEl = document.getElementById('time'), playBtn = document.getElementById('play');
 const chips = document.getElementById('chips'), speedBtn = document.getElementById('speed');
+const bpBtn = document.getElementById('bpBtn'), bpMsg = document.getElementById('bpMsg'), scrubWrap = document.getElementById('scrubWrap');
+let bpOn = q0().get('breakpoints') !== '0';
+function q0(){ return new URLSearchParams(location.search); }
 const q = new URLSearchParams(location.search);
 let frame = +q.get('frame') || 0, playing = !(q.has('frame') || q.get('autoplay')==='0'), speed = 1, lastT = 0, accF = 0, lastShown = -1, lastScene = -1;
 if(q.get('controls')==='0') document.getElementById('controls').style.display='none';
 scrub.max = TOTAL-1;
+BPS.forEach(b=>{ const d=document.createElement('div'); d.className='tick'+(b.major?' major':''); d.style.left=(b.f/(TOTAL-1)*100)+'%'; scrubWrap.appendChild(d); });
+function setBp(on){ bpOn=on; bpBtn.textContent='Breakpoints: '+(on?'on':'off'); bpBtn.classList.toggle('off',!on); }
+bpBtn.onclick = ()=>setBp(!bpOn);
+setBp(bpOn);
 SCENES.forEach((s,i)=>{const b=document.createElement('button');b.textContent=s.name;b.onclick=()=>{frame=s.start;draw(true)};chips.appendChild(b);});
 function fmt(f){const s=Math.floor(f/FPS);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
 function draw(force){
@@ -385,9 +422,23 @@ function fit(){
 }
 function tick(t){
   if(playing){
-    if(lastT){ accF += (t-lastT)/1000*FPS*speed; if(accF>=1){ const n=Math.floor(accF); accF-=n; frame += n; } }
+    if(lastT){
+      accF += (t-lastT)/1000*FPS*speed;
+      if(accF>=1){
+        const n=Math.floor(accF); accF-=n;
+        let next = frame + n;
+        if(bpOn){
+          const hit = BPS.find(b => b.f > frame && b.f <= next);   // stop exactly on the breakpoint, even at 2x
+          if(hit){ next = hit.f; playing=false; playBtn.textContent='Play'; }
+        }
+        frame = next;
+      }
+    }
     if(frame>=TOTAL-1){ frame=TOTAL-1; playing=false; playBtn.textContent='Play'; }
   }
+  const atBp = !playing && bpOn && BPS.some(b=>b.f===Math.floor(frame));
+  const msg = atBp ? 'Breakpoint: press Space to continue' : '';
+  if(bpMsg.textContent !== msg) bpMsg.textContent = msg;
   lastT = t; draw(false); requestAnimationFrame(tick);
 }
 playBtn.onclick = ()=>{ if(frame>=TOTAL-1) frame=0; playing=!playing; playBtn.textContent=playing?'Pause':'Play'; };
@@ -399,6 +450,9 @@ addEventListener('keydown',e=>{
   else if(e.code==='ArrowRight'){ frame=Math.min(TOTAL-1,frame+(e.shiftKey?5:1)*FPS); draw(true); }
   else if(e.code==='ArrowLeft'){ frame=Math.max(0,frame-(e.shiftKey?5:1)*FPS); draw(true); }
   else if(e.code==='Home'){ frame=0; draw(true); }
+  else if(e.code==='KeyB'){ bpBtn.click(); }
+  else if(e.code==='PageDown'){ e.preventDefault(); const n=SECTIONS.find(s=>s>frame); if(n!==undefined){ frame=n; playing=true; playBtn.textContent='Pause'; draw(true);} }
+  else if(e.code==='PageUp'){ e.preventDefault(); const p=[...SECTIONS].reverse().find(s=>s<frame-45); frame=p===undefined?0:p; playing=true; playBtn.textContent='Pause'; draw(true); }
 });
 addEventListener('resize',fit);
 playBtn.textContent = playing?'Pause':'Play';
