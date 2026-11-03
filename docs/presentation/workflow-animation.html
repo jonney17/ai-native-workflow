@@ -137,7 +137,7 @@ function sTitle(lf){
 }
 
 function sIdea(lf){
-  const stages = ['Spec','Dev','QE','Review','Deploy'];
+  const stages = [['Planner','spec'],['Dev','code'],['QE','tests'],['Reviewer','approval'],['Release','deploy']];
   const sweep = lf>=30 && lf<170 ? Math.floor((lf-30)/24)%5 : -1;
   const leftDim = lerp(1,.45,prog(lf,150,30));
   const cx=410, cy=300, R=200;
@@ -149,9 +149,10 @@ function sIdea(lf){
   <div class="abs card" style="left:100px;top:230px;width:820px;height:700px;opacity:${(leftDim*prog(lf,10,18)).toFixed(3)}">
     <div class="abs lbl" style="left:40px;top:34px">Traditional SDLC</div>
     <div class="abs" style="left:30px;top:150px;display:flex;align-items:center;gap:8px">
-      ${stages.map((s,i)=>`<div style="padding:22px 14px;border-radius:14px;font-size:27px;font-weight:700;border:3px solid ${sweep===i?'var(--amber)':'var(--line)'};background:${sweep===i?'rgba(255,180,84,.16)':'var(--panel2)'};min-width:104px;text-align:center">${s}</div>${i<4?'<div style="color:var(--mute);font-size:28px">→</div>':''}`).join('')}
+      ${stages.map(([s,w],i)=>`<div style="padding:16px 12px;border-radius:14px;font-size:24px;font-weight:700;border:3px solid ${sweep===i?'var(--amber)':'var(--line)'};background:${sweep===i?'rgba(255,180,84,.16)':'var(--panel2)'};opacity:${sweep===-1||sweep===i?1:.55};min-width:96px;text-align:center">${s}<div style="font-size:19px;font-weight:500;color:${sweep===i||sweep===-1?'#b8c0e6':'var(--mute)'};margin-top:4px">${sweep===-1||sweep===i?w:'waiting'}</div></div>${i<4?'<div style="color:var(--mute);font-size:26px">→</div>':''}`).join('')}
     </div>
-    <div class="abs sub" style="left:40px;top:330px;width:740px;line-height:1.5">Each stage waits for the one before it. A late change means walking the chain by hand, and nobody knows what is stale.</div>
+    <div class="abs" style="left:40px;top:262px;font-size:21px;color:var(--mute)">→ = hand-off: the next role cannot start until it arrives</div>
+    <div class="abs sub" style="left:40px;top:340px;width:740px;line-height:1.5">Each role waits for a hand-off from the one before it. A late change means walking the chain by hand, and nobody knows what is stale.</div>
   </div>
   <div class="abs card" style="left:1000px;top:230px;width:820px;height:700px;opacity:${rp.toFixed(3)};transform:translateX(${((1-rp)*50).toFixed(1)}px)">
     <div class="abs lbl" style="left:40px;top:34px">Our flow</div>
