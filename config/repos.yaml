@@ -1,0 +1,14 @@
+# Repo registry shared by the team. Repo names must match the names used in tasks.md.
+# Keep it simple: two levels only (repo name, then key: value). The launcher reads it without a YAML library.
+# Local paths are NOT stored here, because they differ per developer: see repos.local.example.yaml.
+repos: {}
+# Example (replace {} above with real entries):
+# repos:
+#   repo-a:
+#     remote: git@github.com:your-org/repo-a.git
+#     default_branch: main
+#     deploy: independent          # informational: how this repo is usually deployed
+#   repo-b:
+#     remote: git@github.com:your-org/repo-b.git
+#     default_branch: main
+#     deploy: after repo-a         # informational

@@ -1,0 +1,8 @@
+# Copy this file to config/repos.local.yaml (git-ignored) and set the paths on YOUR machine.
+# Alternative: set the environment variable WF_REPOS_ROOT; repo X is then looked up at $WF_REPOS_ROOT/X.
+# A path in this file wins over WF_REPOS_ROOT.
+repos:
+  repo-a:
+    local_path: ~/work/repo-a
+  repo-b:
+    local_path: C:\work\repo-b
