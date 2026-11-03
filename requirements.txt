@@ -1,0 +1,3 @@
+# Only wf_status.py needs a third-party library (it reads the hand-edited YAML manifest).
+# The other scripts use only the Python standard library.
+PyYAML>=6.0
