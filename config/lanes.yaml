@@ -1,0 +1,90 @@
+# Lane contracts: the single source of truth for who does what.
+# A lane is READY when every `requires` artifact exists at the required status
+# (default: ready; `@approved` means a human gate passed) and none is stale.
+# Lanes never call each other. They only read and write artifacts.
+version: 1
+statuses: [missing, draft, ready, approved, rejected, stale]
+
+lanes:
+  planner:
+    purpose: Explore the ticket and/or PRD, then define the work (spec, design, tasks).
+    requires: [ticket-context.md]
+    produces: [spec.md, design.md, tasks.md]
+    gate:
+      artifacts: [spec.md, design.md, tasks.md]   # approved together
+      approver: human
+
+  qe:
+    purpose: Prove the behavior.
+    requires: [spec.md@approved, tasks.md@approved]
+    produces: [test-plan.md, tests/]
+
+  dev:
+    purpose: Build the change, one task per repo.
+    fan_out: repo              # one instance per repo listed in tasks.md
+    requires: [spec.md@approved, design.md@approved, tasks.md@approved]
+    produces: ["changes/<repo>/"]
+    scope: own repo only
+
+  reviewer:
+    purpose: Verify, then review.
+    requires: ["changes/*", test-plan.md]
+    produces: [verify-report.md, review-report.md]
+    independent_of: [dev, qe]
+    gate:
+      artifacts: [review-report.md]
+      approver: human
+      when: risk_flagged       # see config/risk-rules.yaml
+
+  inspect-adapt:
+    purpose: Learn from the finished ticket (inspect trail and telemetry, adapt, log to ledger).
+    trigger: ticket_accepted   # acceptance policy is TBD, see acceptance block in the manifest
+    requires: [events.log, "metrics/*", "all artifacts"]
+    produces: [inspection-report.md, "ledger/L-*.yaml", "overlay/<lane>/L-*.md"]
+    independent_of: [planner, qe, dev, reviewer]
+
+# Work kinds. `story` is the default. The manifest's `kind` picks the profile.
+kinds:
+  story:
+    lanes: [planner, qe, dev, reviewer, inspect-adapt]
+    source_of_work: Jira criteria (J-n) and PRD requirement ids
+    traceability: required            # Jira criteria -> ACs
+    pi_tracking: counts toward PRD requirement completion
+  chore:                              # tech debt, refactor, upgrade
+    lanes: [planner, qe, dev, reviewer, inspect-adapt]
+    source_of_work: intent and done criteria (C-n) in ticket-context.md, written by the requester
+    traceability: required            # done criteria -> ACs
+    prd_refs: not required
+    pi_tracking: capacity only, tagged by origin
+  spike:                              # investigation that answers a question
+    lanes: [planner, inspect-adapt]   # inspect-adapt is disabled by default, enable per ticket
+    planner_produces: [findings.md]   # replaces spec, design and tasks for this kind
+    gate:
+      artifacts: [findings.md]
+      approver: human                 # a human reads the findings and accepts, rejects or asks for more
+    no_code_no_tests_no_deploy: true
+    pi_tracking: capacity only, tagged by origin
+
+# Not a lane: merge and deploy are plain CI/CD after review passes.
+system_steps:
+  deploy:
+    runner: ci_cd
+    requires: [review-report.md]
+    order: "from the Release section of tasks.md (deploy_order is independent or ordered)"
+    on_partial_failure: stop at the first failure, escalate, and record what is already merged or deployed (rollback is manual)   # PLACEHOLDER
+
+# Simple versions for the skeleton. Each is to be improved by the people who know the area best.
+placeholders:
+  cross_repo_tests:
+    now: QE lists cross-repo scenarios (given / when / then) in test-plan.md; automation is optional; the Reviewer runs any tests under tests/integration/ and lists the rest as manual
+    improve: owned by QE; a real integration or contract test layer across services
+  release_order:
+    now: tasks.md declares deploy_order (independent, or ordered with the sequence); CI/CD follows it; stop and escalate on the first failure
+    improve: owned by Dev; automated ordered deploys, partial-failure handling, rollback
+
+rules:
+  - Agents write artifacts and append proposed events; only the orchestrator changes statuses.
+  - One writer per artifact, through a lease that expires.
+  - A changed input hash marks every dependent artifact stale and re-queues its lane.
+  - The agent identity that produced changes/* must never sign verify-report.md or review-report.md.
+  - Ticket status is derived from lane and artifact statuses; nobody sets it by hand.

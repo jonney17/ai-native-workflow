@@ -1,0 +1,27 @@
+# Decides when review needs a human. HUMANS EDIT THIS FILE ONLY.
+# Inspect & Adapt must never change it (see overlay-rules.yaml).
+# Starting values: tune at sprint retro using the ledger.
+version: 1
+# Multi-repo alone is not a risk: independent changes with no contract, schema or other flagged impact
+# go to the AI reviewer. Contract and schema changes are caught by the touches_* signals below.
+human_review_required_if_any:
+  - multi_repo_ordered_deploy          # more than one repo AND tasks.md declares deploy_order: ordered
+  - touches_api_contract
+  - touches_schema_or_migration
+  - touches_auth_permissions_secrets_crypto
+  - touches_ci_deploy_infra_or_dependencies
+  - diff_lines_over: 1000
+  - ac_coverage_incomplete             # some AC has no passing test
+  - rework_loops_at_least: 3
+user_visible_change_needs_acceptance_signoff: true
+
+# Path globs that define the "touches_*" signals. Adjust per repo.
+paths:
+  api_contract: ["**/openapi*.y*ml", "**/*.proto", "**/api/**"]
+  schema_or_migration: ["**/migrations/**", "**/*.sql", "**/db/**"]
+  auth_permissions_secrets_crypto: ["**/auth/**", "**/security/**", "**/*secret*", "**/*crypto*"]
+  ci_deploy_infra_or_dependencies: [".github/**", "**/Dockerfile", "**/helm/**", "**/pom.xml", "**/package.json", "**/build.gradle*"]
+
+otherwise:
+  reviewer: ai
+  human_spot_check_rate: 0.2          # about one in five

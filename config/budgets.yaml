@@ -1,0 +1,9 @@
+# Loop bounds. Exceeding any limit marks the lane FAILED and escalates the ticket.
+# Starting values: tune from the inspection reports.
+version: 1
+per_lane:
+  max_attempts: 3
+  lease_minutes: 30                 # a crashed agent's lease expires and the work returns to the queue
+per_ticket:
+  max_tokens: unlimited             # set a real value after the workflow is built (earlier placeholder: 1500000)
+  max_wall_clock_hours: unlimited   # earlier placeholder: 24
