@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AI-native workflow: animated overview and demo</title>
+<title>LEGO AI workflow: animated overview and demo</title>
 <style>
 :root{
   --bg:#0e1120; --panel:#171b30; --panel2:#1e2340; --line:#2d3558; --text:#e9ecf8; --mute:#8d96bb;
@@ -128,7 +128,7 @@ function sTitle(lf){
   const lanes = [['Planner','planner'],['QE','qe'],['Dev','dev'],['Reviewer','reviewer'],['Inspect & Adapt','ia']];
   return `
   <div class="abs lbl" style="left:140px;top:150px;${rise(lf,0)}">Team LEGO</div>
-  <div class="abs h1" style="left:140px;top:210px;width:1500px;${rise(lf,6,22,40)}">AI-native workflow</div>
+  <div class="abs h1" style="left:140px;top:210px;width:1500px;${rise(lf,6,22,40)}">LEGO AI workflow</div>
   <div class="abs sub" style="left:144px;top:420px;width:1400px;line-height:1.4;${rise(lf,22)}">PI planning → PRD → tickets. Each ticket triggers one run of a flow where independent role agents share artifacts, instead of a fixed pipeline.</div>
   <div class="abs" style="left:140px;top:640px;display:flex;gap:22px">
     ${lanes.map(([n,k],i)=>`<div style="${rise(lf,40+i*9)};padding:20px 34px;border-radius:16px;font-size:34px;font-weight:700;border:3px solid ${LANE_COL[k]};color:${LANE_COL[k]};background:color-mix(in srgb, ${LANE_COL[k]} 12%, transparent)">${n}</div>`).join('')}
