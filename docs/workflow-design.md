@@ -246,6 +246,7 @@ docs/        this document
 - Scripts to create a work item, launch a lane session with telemetry tags (starting in the right repo folder), and check the telemetry. Tested on synthetic data.
 - A repo registry with per-developer local paths, and a declared release order per ticket.
 - A read-only status script (`wf_status.py`): from a ticket's manifest and the lane contracts it derives artifact staleness, lane states, the ticket status, and the next actions. It is the first slice of the orchestrator and is useful for a live demo, since it shows what is ready, what is stale and who has to act.
+- A demo kit (`demo/`): one story across two fake repos, run step by step with scripted stand-in agents through the real launcher, status and telemetry scripts. It shows parallel lanes, a verify failure with a one-repo rework, staleness, risk-flagged review, ordered deploy, acceptance, and the Inspect & Adapt ledger and overlay. The demo script plays the orchestrator and the human, and the telemetry numbers are synthetic.
 
 **Not built yet**
 

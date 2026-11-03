@@ -51,6 +51,7 @@ ledger/      one file per entry, template in _template.yaml
 tickets/     tickets/<TICKET>/run-<N>/ with manifest.yaml, events.log, decisions.md, artifacts/, metrics/
 otel-dump/   raw telemetry per session (git-ignored, may contain sensitive content)
 scripts/     new_ticket.py, wf_launch.py, otel_check.py, wf_status.py (Python 3; wf_status.py needs PyYAML, see requirements.txt)
+demo/        runnable demo with fake repos and scripted agents (workspace is git-ignored), see demo/README.md
 ```
 
 ## Quick start
@@ -66,6 +67,10 @@ python scripts/otel_check.py --ticket PROJ-123 --lane planner
 python scripts/wf_status.py PROJ-123                 # where it stands, what is ready, what to do next
 python scripts/wf_status.py --all                    # one line per work item
 ```
+
+## Try the demo
+
+To see a whole ticket run without real repos or agents: `python demo/demo.py setup`, then `python demo/demo.py next` once per step. It uses two fake repos and scripted stand-in agents, in a separate git-ignored workspace. A talk track is in [demo/WALKTHROUGH.md](demo/WALKTHROUGH.md).
 
 `wf_launch.py` turns on the Copilot OTel file exporter, tags the session with `workflow.*` attributes (ticket, kind, run, lane, repo, attempt, launch_id, active overlay candidates), writes the dump under `otel-dump/`, and logs `lane_started` and `lane_exited` in `events.log`. `otel_check.py` verifies the attributes and token counts and writes a summary to the ticket's `metrics/` folder. Run it after every lane session; `missing` or `incomplete` stops Inspect & Adapt from drawing conclusions about that lane.
 
