@@ -1,0 +1,3 @@
+# One event per line, tab-separated: <iso-timestamp>  <actor>  <event>  <json>
+# Agents append proposed events (spec_gap, question_raised, escalate). The orchestrator applies them.
+# The launcher records lane_started / lane_exited with the launch_id used to join telemetry.
