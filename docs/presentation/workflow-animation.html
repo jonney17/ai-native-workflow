@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI-native workflow: animated overview and demo</title>
+<style>
+:root{
+  --bg:#0e1120; --panel:#171b30; --panel2:#1e2340; --line:#2d3558; --text:#e9ecf8; --mute:#8d96bb;
+  --blue:#5b9dff; --green:#41d392; --amber:#ffb454; --red:#ff6b7d; --violet:#a78bfa; --grey:#4a5278; --teal:#3dd6d0;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#05060d;color:var(--text);font-family:Inter,"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;overflow:hidden}
+#app{display:flex;flex-direction:column;height:100%}
+#frameWrap{flex:1;display:flex;align-items:center;justify-content:center;min-height:0}
+#viewport{position:relative;overflow:hidden;background:var(--bg);border-radius:6px}
+#stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;background:
+  radial-gradient(1200px 700px at 85% -10%,rgba(91,157,255,.14),transparent 60%),
+  radial-gradient(900px 600px at -5% 110%,rgba(167,139,250,.12),transparent 60%),var(--bg)}
+#controls{display:flex;align-items:center;gap:14px;padding:10px 16px;background:#0a0c18;border-top:1px solid #1b2040;font-size:14px;color:var(--mute)}
+#controls button{background:#1a1f3a;color:var(--text);border:1px solid #2b3358;border-radius:8px;padding:6px 12px;cursor:pointer;font:inherit}
+#controls button:hover{background:#242b52}
+#scrub{flex:1;min-width:120px;accent-color:var(--blue)}
+#time{font-variant-numeric:tabular-nums;min-width:96px;text-align:right}
+#chips{display:flex;gap:6px;flex-wrap:wrap}
+#chips button.on{background:var(--blue);color:#05101f;border-color:var(--blue)}
+.abs{position:absolute}
+.h1{font-size:92px;font-weight:800;letter-spacing:-2px;line-height:1.05}
+.h2{font-size:58px;font-weight:750;letter-spacing:-1px}
+.sub{font-size:30px;color:var(--mute)}
+.card{background:var(--panel);border:2px solid var(--line);border-radius:22px}
+.lbl{font-size:22px;color:var(--mute);text-transform:uppercase;letter-spacing:2px;font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:10px;padding:10px 18px;border-radius:12px;font-family:"Cascadia Code",Consolas,Menlo,monospace;font-size:24px;border:2px solid var(--line);background:var(--panel2);white-space:nowrap}
+.pill{display:inline-block;padding:6px 16px;border-radius:999px;font-size:22px;font-weight:700;letter-spacing:.5px}
+.mono{font-family:"Cascadia Code",Consolas,Menlo,monospace}
+.term{background:#090b16;border:2px solid var(--line);border-radius:18px;padding:22px 26px;font-family:"Cascadia Code",Consolas,Menlo,monospace;font-size:25px;line-height:1.55;overflow:hidden}
+.t-cmd{color:#e9ecf8}.t-ok{color:var(--green)}.t-bad{color:var(--red)}.t-warn{color:var(--amber)}.t-note{color:var(--mute)}.t-txt{color:#b8c0e6}
+.dot{display:inline-block;width:16px;height:16px;border-radius:50%;background:var(--grey)}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="frameWrap"><div id="viewport"><div id="stage"></div></div></div>
+  <div id="controls">
+    <button id="play" title="Space">Pause</button>
+    <button id="restart" title="Home">Restart</button>
+    <input id="scrub" type="range" min="0" max="1" value="0">
+    <span id="time">0:00 / 0:00</span>
+    <button id="speed" title="Playback speed">1x</button>
+    <div id="chips"></div>
+  </div>
+</div>
+<script>
+/* Frame-driven animation in the style of Remotion: one pure function render(frame) draws the whole picture.
+   30 fps, 1920x1080. Nothing depends on the clock, so any frame can be shown or exported.
+   URL options: ?frame=N (start paused at frame N)  ?controls=0 (hide the bar)  ?autoplay=0
+   Keys: Space play/pause, Left/Right 1 s (Shift 5 s), Home restart. */
+const FPS = 30;
+const SCENES = [
+  {id:'title', name:'Title', d:120},
+  {id:'idea',  name:'The idea', d:300},
+  {id:'lanes', name:'Lanes', d:360},
+  {id:'status',name:'Status and stale', d:300},
+  {id:'gates', name:'Gates and risk', d:300},
+  {id:'learn', name:'Learning loop', d:300},
+  {id:'demo',  name:'Demo', d:90 + 13*150},
+  {id:'next',  name:'Next', d:300},
+];
+let acc = 0; SCENES.forEach(s => { s.start = acc; acc += s.d; });
+const TOTAL = acc;
+
+const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
+const ease=t=>1-Math.pow(1-t,3);
+const prog=(lf,s,d)=>ease(clamp((lf-s)/d,0,1));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const rise=(lf,s,d=18,px=24)=>`opacity:${prog(lf,s,d).toFixed(3)};transform:translateY(${((1-prog(lf,s,d))*px).toFixed(1)}px)`;
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+const ST = {
+  missing:{c:'var(--grey)', t:'missing'}, draft:{c:'var(--violet)', t:'draft'}, ready:{c:'var(--blue)', t:'ready'},
+  approved:{c:'var(--green)', t:'approved'}, stale:{c:'var(--amber)', t:'stale'}, rejected:{c:'var(--red)', t:'rejected'},
+  waiting:{c:'var(--grey)', t:'waiting'}, working:{c:'var(--violet)', t:'working'}, done:{c:'var(--green)', t:'done'},
+  deployed:{c:'var(--teal)', t:'deployed'}
+};
+function pill(state){
+  const s = ST[state] || ST.missing;
+  return `<span class="pill" style="background:color-mix(in srgb, ${s.c} 22%, transparent);color:${s.c};border:2px solid ${s.c}">${s.t}</span>`;
+}
+function chip(text, state, style=''){
+  const s = ST[state] || ST.missing;
+  return `<span class="chip" style="border-color:${s.c};color:${state==='missing'?'var(--mute)':'var(--text)'};${style}"><i class="dot" style="background:${s.c}"></i>${text}</span>`;
+}
+const LANE_COL = {planner:'#5b9dff', qe:'#3dd6d0', dev:'#41d392', reviewer:'#ffb454', ia:'#a78bfa'};
+
+/* ---------------------------------------------------------------- scenes */
+
+function sTitle(lf){
+  const lanes = [['Planner','planner'],['QE','qe'],['Dev','dev'],['Reviewer','reviewer'],['Inspect & Adapt','ia']];
+  return `
+  <div class="abs lbl" style="left:140px;top:150px;${rise(lf,0)}">Team LEGO</div>
+  <div class="abs h1" style="left:140px;top:210px;width:1500px;${rise(lf,6,22,40)}">AI-native workflow</div>
+  <div class="abs sub" style="left:144px;top:420px;width:1400px;line-height:1.4;${rise(lf,22)}">PI planning → PRD → tickets. Each ticket triggers one run of a flow where independent role agents share artifacts, instead of a fixed pipeline.</div>
+  <div class="abs" style="left:140px;top:640px;display:flex;gap:22px">
+    ${lanes.map(([n,k],i)=>`<div style="${rise(lf,40+i*9)};padding:20px 34px;border-radius:16px;font-size:34px;font-weight:700;border:3px solid ${LANE_COL[k]};color:${LANE_COL[k]};background:color-mix(in srgb, ${LANE_COL[k]} 12%, transparent)">${n}</div>`).join('')}
+  </div>
+  <div class="abs sub" style="left:144px;top:780px;${rise(lf,90)}">A skeleton workflow with a runnable demo</div>`;
+}
+
+function sIdea(lf){
+  const stages = ['Spec','Dev','QE','Review','Deploy'];
+  const sweep = lf>=30 && lf<170 ? Math.floor((lf-30)/24)%5 : -1;
+  const leftDim = lerp(1,.45,prog(lf,150,30));
+  const cx=410, cy=300, R=200;
+  const lanes = [['Planner','planner'],['QE','qe'],['Dev','dev'],['Reviewer','reviewer'],['Inspect & Adapt','ia']];
+  const pos = lanes.map((_,i)=>{const a=-Math.PI/2+i*2*Math.PI/5;return [cx+R*Math.cos(a)*1.45, cy+R*Math.sin(a)*1.0];});
+  const rp = prog(lf,130,40);
+  return `
+  <div class="abs h2" style="left:100px;top:70px;${rise(lf,0)}">From a fixed pipeline to independent lanes</div>
+  <div class="abs card" style="left:100px;top:230px;width:820px;height:700px;opacity:${(leftDim*prog(lf,10,18)).toFixed(3)}">
+    <div class="abs lbl" style="left:40px;top:34px">Traditional SDLC</div>
+    <div class="abs" style="left:30px;top:150px;display:flex;align-items:center;gap:8px">
+      ${stages.map((s,i)=>`<div style="padding:22px 14px;border-radius:14px;font-size:27px;font-weight:700;border:3px solid ${sweep===i?'var(--amber)':'var(--line)'};background:${sweep===i?'rgba(255,180,84,.16)':'var(--panel2)'};min-width:104px;text-align:center">${s}</div>${i<4?'<div style="color:var(--mute);font-size:28px">→</div>':''}`).join('')}
+    </div>
+    <div class="abs sub" style="left:40px;top:330px;width:740px;line-height:1.5">Each stage waits for the one before it. A late change means walking the chain by hand, and nobody knows what is stale.</div>
+  </div>
+  <div class="abs card" style="left:1000px;top:230px;width:820px;height:700px;opacity:${rp.toFixed(3)};transform:translateX(${((1-rp)*50).toFixed(1)}px)">
+    <div class="abs lbl" style="left:40px;top:34px">Our flow</div>
+    <svg class="abs" style="left:0;top:0" width="820" height="700">
+      ${pos.map(([x,y],i)=>`<line x1="${cx}" y1="${cy+60}" x2="${x}" y2="${y+60}" stroke="${LANE_COL[lanes[i][1]]}" stroke-width="3" stroke-dasharray="8 8" opacity="${(prog(lf,170+i*10,20)*.8).toFixed(3)}"/>`).join('')}
+    </svg>
+    <div class="abs" style="left:${cx-135}px;top:${cy+20}px;width:270px;height:80px;border-radius:16px;border:3px solid var(--line);background:var(--panel2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;opacity:${prog(lf,150,20).toFixed(3)}">Shared artifacts</div>
+    ${lanes.map(([n,k],i)=>`<div class="abs" style="left:${pos[i][0]-95}px;top:${pos[i][1]+36}px;width:190px;text-align:center;padding:14px 8px;border-radius:14px;font-size:25px;font-weight:700;border:3px solid ${LANE_COL[k]};color:${LANE_COL[k]};background:var(--panel);opacity:${prog(lf,160+i*10,20).toFixed(3)}">${n}</div>`).join('')}
+    <div class="abs sub" style="left:40px;top:600px;width:740px;opacity:${prog(lf,230,25).toFixed(3)}">Lanes never call each other. They read and write artifacts.</div>
+  </div>`;
+}
+
+function sLanes(lf){
+  const rows = [
+    ['Planner','planner','ticket-context.md','spec · design · tasks','human gate: plan approval'],
+    ['QE','qe','spec@approved · tasks@approved','test-plan.md · tests/',''],
+    ['Dev (per repo)','dev','spec · design · tasks @approved','changes/<repo>/',''],
+    ['Reviewer','reviewer','changes/* · test-plan.md','verify-report · review-report','human gate: only if risk-flagged'],
+    ['Inspect & Adapt','ia','ticket accepted','inspection-report · ledger · overlay',''],
+  ];
+  return `
+  <div class="abs h2" style="left:100px;top:70px;${rise(lf,0)}">A lane is a role with a contract</div>
+  <div class="abs sub" style="left:104px;top:160px;${rise(lf,8)}">Ready when every required artifact exists at the required status and none is stale.</div>
+  <div class="abs lbl" style="left:440px;top:262px;${rise(lf,16)}">Requires</div>
+  <div class="abs lbl" style="left:960px;top:262px;${rise(lf,16)}">Produces</div>
+  ${rows.map((r,i)=>{const s=30+i*40; const col=LANE_COL[r[1]];return `
+  <div class="abs card" style="left:100px;top:${310+i*118}px;width:1720px;height:100px;${rise(lf,s)};border-color:${col}55">
+    <div class="abs" style="left:0;top:0;width:14px;height:100px;border-radius:22px 0 0 22px;background:${col}"></div>
+    <div class="abs" style="left:40px;top:30px;font-size:30px;font-weight:750;color:${col};width:340px">${esc(r[0])}</div>
+    <div class="abs mono" style="left:340px;top:34px;font-size:23px;width:500px;color:#b8c0e6">${esc(r[2])}</div>
+    <div class="abs mono" style="left:860px;top:34px;font-size:23px;width:540px;color:#b8c0e6">→ ${esc(r[3])}</div>
+    <div class="abs" style="left:1340px;top:34px;font-size:21px;color:var(--amber);width:360px;text-align:right;line-height:1.2">${esc(r[4])}</div>
+  </div>`}).join('')}
+  <div class="abs sub" style="left:104px;top:920px;width:1700px;${rise(lf,260)}">Merge and deploy are plain CI/CD, not a lane. Work kinds: story, chore, spike.</div>`;
+}
+
+function sStatus(lf){
+  const chain = ['spec.md','design.md','tasks.md','test-plan.md','changes/*','verify-report.md'];
+  function st(i){
+    if(lf>=160){
+      const k = lf-160;
+      if(i===0) return 'stale';
+      if(i>=3 && k>=15*(i-1)) return 'stale';
+    }
+    if(i<3) return lf<20?'missing':lf<45?'draft':lf<75?'ready':'approved';
+    return lf<95+i*8?'missing':lf<120+i*8?'draft':'ready';
+  }
+  const ladder = ['Planning','Building','Verifying','In review','Deploying','Awaiting acceptance','Done'];
+  let li = Math.min(6, Math.floor(lf/34)); if(lf>=160) li = 0;
+  const stale = lf>=160;
+  return `
+  <div class="abs h2" style="left:100px;top:70px;${rise(lf,0)}">Status is derived, and staleness is tracked</div>
+  <div class="abs card" style="left:100px;top:230px;width:1000px;height:700px;${rise(lf,8)}">
+    <div class="abs lbl" style="left:40px;top:34px">Artifacts record the hash of their inputs</div>
+    ${chain.map((n,i)=>`<div class="abs" style="left:40px;top:${110+i*88}px;display:flex;align-items:center;gap:18px">${chip(n, st(i), 'min-width:290px')}${pill(st(i))}</div>`).join('')}
+    <div class="abs" style="left:640px;top:120px;width:330px;font-size:25px;line-height:1.5;color:#b8c0e6;opacity:${prog(lf,100,16).toFixed(3)}">QE, Dev and the Reviewer are built on the approved plan.</div>
+    <div class="abs" style="left:640px;top:290px;width:330px;font-size:27px;line-height:1.45;color:var(--amber);font-weight:650;opacity:${prog(lf,150,16).toFixed(3)}">Someone edits the approved spec.md ...</div>
+    <div class="abs" style="left:640px;top:440px;width:330px;font-size:25px;line-height:1.5;color:var(--amber);opacity:${prog(lf,190,20).toFixed(3)}">... and everything built on it is stale, each with its reason. Stale means re-queue.</div>
+  </div>
+  <div class="abs card" style="left:1160px;top:230px;width:660px;height:700px;${rise(lf,16)}">
+    <div class="abs lbl" style="left:40px;top:34px">Ticket status (never typed)</div>
+    ${ladder.map((n,i)=>`<div class="abs" style="left:40px;top:${110+i*76}px;display:flex;align-items:center;gap:18px;opacity:${i===li?1:.4}">
+      <i class="dot" style="width:22px;height:22px;background:${i===li?(stale?'var(--amber)':'var(--green)'):'var(--grey)'}"></i>
+      <span style="font-size:34px;font-weight:${i===li?750:500}">${n}</span></div>`).join('')}
+    <div class="abs" style="left:40px;top:650px;font-size:22px;color:var(--mute);width:580px">Computed from lane and artifact states by wf_status.py</div>
+  </div>`;
+}
+
+function sGates(lf){
+  const signals = ['ordered multi-repo deploy','changes an API contract','schema or migration','auth, secrets, crypto','CI, deploy or dependencies','diff over 400 lines','AC coverage incomplete','2 or more rework loops'];
+  const col = (x,s,title,tag,body,color) => `
+  <div class="abs card" style="left:${x}px;top:230px;width:540px;height:690px;${rise(lf,s)};border-color:${color}88">
+    <div class="abs lbl" style="left:36px;top:34px;color:${color}">${tag}</div>
+    <div class="abs" style="left:36px;top:84px;font-size:40px;font-weight:750;width:470px;line-height:1.15">${title}</div>
+    ${body}
+  </div>`;
+  return `
+  <div class="abs h2" style="left:100px;top:70px;${rise(lf,0)}">Humans decide at three points only</div>
+  ${col(100,10,'Plan approval','Gate 1',`<div class="abs" style="left:36px;top:230px;width:470px;font-size:28px;line-height:1.55;color:#b8c0e6">Spec, design and tasks are approved together. Nothing else needs a human until risk shows up.</div>`,'var(--blue)')}
+  ${col(690,40,'Review, only when risk-flagged','Gate 2',`<div class="abs" style="left:36px;top:260px;width:470px;font-size:23px;line-height:1.6">${signals.map((s,i)=>`<div style="opacity:${prog(lf,80+i*12,14).toFixed(3)};color:var(--amber)">● <span style="color:#d4d9f2">${s}</span></div>`).join('')}</div>
+     <div class="abs" style="left:36px;top:600px;width:470px;font-size:22px;color:var(--mute);opacity:${prog(lf,200,20).toFixed(3)}">Otherwise an AI reviewer, with a 20% human spot check.</div>`,'var(--amber)')}
+  ${col(1280,70,'Sprint retro','Gate 3',`<div class="abs" style="left:36px;top:200px;width:470px;font-size:28px;line-height:1.55;color:#b8c0e6">The team reviews the whole ledger and decides what is promoted into the shared skills.</div>
+     <div class="abs" style="left:36px;top:470px;width:470px;font-size:24px;line-height:1.5;color:var(--green);opacity:${prog(lf,210,20).toFixed(3)}">Rules in config/ are edited by humans only. Agents propose, a deterministic orchestrator applies.</div>`,'var(--violet)')}`;
+}
+
+function sLearn(lf){
+  const nodes = [
+    ['Ticket accepted','Trigger',80,300],
+    ['Inspect & Adapt','Reads the trail and OTEL metrics',690,300],
+    ['Ledger + overlay candidate','One entry, one removable change',1300,300],
+    ['Next tickets run with it','Tagged workflow.overlay',1300,640],
+    ['Sprint retro','Promote, keep or reject',690,640],
+    ['Team skills','Promoted candidates become the baseline',80,640],
+  ];
+  const step = Math.min(5, Math.floor(lf/40));
+  return `
+  <div class="abs h2" style="left:100px;top:70px;${rise(lf,0)}">The flow improves itself, under guardrails</div>
+  ${nodes.map((n,i)=>`<div class="abs card" style="left:${n[2]}px;top:${n[3]}px;width:540px;height:190px;${rise(lf,i*30,16)};border-color:${step===i?'var(--violet)':'var(--line)'};background:${step===i?'#241f4d':'var(--panel)'}">
+    <div class="abs lbl" style="left:30px;top:22px">${i+1}</div>
+    <div class="abs" style="left:30px;top:60px;font-size:33px;font-weight:750;width:480px">${n[0]}</div>
+    <div class="abs" style="left:30px;top:122px;font-size:23px;color:var(--mute);width:480px">${n[1]}</div></div>`).join('')}
+  <div class="abs" style="left:632px;top:355px;font-size:56px;color:var(--violet);opacity:${prog(lf,30,10).toFixed(3)}">→</div>
+  <div class="abs" style="left:1242px;top:355px;font-size:56px;color:var(--violet);opacity:${prog(lf,60,10).toFixed(3)}">→</div>
+  <div class="abs" style="left:1550px;top:510px;font-size:56px;color:var(--violet);opacity:${prog(lf,90,10).toFixed(3)}">↓</div>
+  <div class="abs" style="left:1242px;top:695px;font-size:56px;color:var(--violet);opacity:${prog(lf,120,10).toFixed(3)}">←</div>
+  <div class="abs" style="left:632px;top:695px;font-size:56px;color:var(--violet);opacity:${prog(lf,150,10).toFixed(3)}">←</div>
+  <div class="abs sub" style="left:104px;top:900px;width:1700px;line-height:1.4;${rise(lf,200)}">Guardrails: advisory content only, evidence required, max 3 active per lane, auto-revert after 3 tickets without gain, expires after one sprint.</div>`;
+}
+
+/* ---------------------------------------------------------------- demo */
+
+const A = ['ctx','spec','design','tasks','plan','api','web','verify','review','acc','insp'];
+const ANAME = {ctx:'ticket-context',spec:'spec',design:'design',tasks:'tasks',plan:'test-plan',api:'changes/shop-api',web:'changes/shop-web',verify:'verify-report',review:'review-report',acc:'acceptance',insp:'inspection'};
+const LN = ['Planner','QE','Dev · shop-api','Dev · shop-web','Reviewer','Inspect & Adapt'];
+const LK = ['planner','qe','dev','dev','reviewer','ia'];
+const M='missing',D='draft',R='ready',AP='approved',S='stale',X='rejected';
+const STEPS = [
+ {title:'Setup', a:[M,M,M,M,M,M,M,M,M,M,M], l:['waiting','waiting','waiting','waiting','waiting','waiting'], n:['','','','','',''], status:['NO TICKET','Two fake repos: shop-api and shop-web'], rel:[null,null],
+   say:'The agents are scripted stand-ins. The launcher, the status view and the telemetry check are the real ones.', term:['$ python demo/demo.py setup','+ workspace ready (git-ignored, separate from real tickets)','# fake repos: shop-api, shop-web','# 13 steps, one ticket: show the tracking number']},
+ {title:'A ticket arrives', a:[R,M,M,M,M,M,M,M,M,M,M], l:['ready','waiting','waiting','waiting','waiting','waiting'], n:['can start','needs spec','needs spec','needs spec','needs changes','needs acceptance'], status:['PLANNING','Planner is ready'], rel:[null,null],
+   say:'Status is never typed. Only one lane can start, because only one has what it needs.', term:['$ python demo/demo.py next','created tickets/DEMO-1/run-1','+ ticket-context.md  ready  (Jira criteria J-1..J-3)','# status derived: PLANNING']},
+ {title:'Planner writes the plan', a:[R,R,R,R,M,M,M,M,M,M,M], l:['done','waiting','waiting','waiting','waiting','waiting'], n:['awaiting approval','needs spec@approved','','','',''], status:['PLANNING','Plan is ready and awaits human approval'], rel:[null,null],
+   say:'It adopted the Jira criteria, added AC-5 and said why, found both repos, and wrote the deploy order.', term:['$ wf_launch.py --lane planner -- <agent>','[planner] reading skills/_common.md','[planner] wrote spec.md, design.md, tasks.md','+ traceability: J-1..J-3 → AC-1..AC-4, AC-5 added','+ otel_status: ok  (synthetic numbers)']},
+ {title:'Human approves the plan', a:[R,AP,AP,AP,M,M,M,M,M,M,M], l:['done','ready','ready','ready','waiting','waiting'], n:['','can start','can start','can start','needs changes','needs acceptance'], status:['BUILDING','Spec approved; QE and both Dev lanes can start'], rel:[null,null],
+   say:'Gate 1. One approval covers spec, design and tasks. The last human input until risk shows up.', term:['$ human: approve spec + design + tasks','+ spec.md, design.md, tasks.md  approved','manifest: repos shop-api, shop-web','release: ordered  shop-api → shop-web']},
+ {title:'QE and two Devs in parallel', a:[R,AP,AP,AP,R,R,R,M,M,M,M], l:['done','done','done','done','ready','waiting'], n:['','','','','can start','needs acceptance'], status:['VERIFYING','All changes and the test plan are in'], rel:[null,null],
+   say:'Three agents, one shared plan, no hand-offs. Each Dev has its own branch in its own repo.', term:['$ launching in parallel: qe, dev/shop-api, dev/shop-web','[qe] wrote test-plan.md + acceptance tests','[dev-shop-api] branch wf/DEMO-1-run1 · tests OK','[dev-shop-web] branch wf/DEMO-1-run1 · tests OK','+ 3 telemetry checks ok']},
+ {title:'Reviewer: shop-web fails', a:[R,AP,AP,AP,R,R,X,R,M,M,M], l:['done','done','done','ready','waiting','waiting'], n:['','','','rework: changes rejected','needs changes','needs acceptance'], status:['BUILDING','Only shop-web goes back to Dev'], rel:[null,null],
+   say:'The Reviewer is independent. It found a real bug: the page prints "Tracking: None". shop-api is untouched.', term:['$ launching: reviewer','[reviewer] shop-api: acceptance tests pass','! shop-web: AC-4, AC-5 FAIL','~ proposed verify_failed (shop-web)','orchestrator: changes/shop-web → rejected']},
+ {title:'Dev reworks shop-web only', a:[R,AP,AP,AP,R,R,R,S,M,M,M], l:['done','done','done','done','stale','waiting'], n:['','','','','verify-report built on old changes','needs acceptance'], status:['VERIFYING','verify-report is stale and re-queues the Reviewer'], rel:[null,null],
+   say:'We never told the Reviewer to go again. The old report was built on old changes, so it is stale.', term:['$ launching: dev/shop-web (attempt 2)','[dev] "Tracking: None" → "not yet available"','+ repo tests OK, committed on the same branch','~ verify-report.md is now STALE']},
+ {title:'Reviewer passes and flags risk', a:[R,AP,AP,AP,R,R,R,R,R,M,M], l:['done','done','done','done','done','waiting'], n:['','','','','human_required: true','needs acceptance'], status:['IN REVIEW','Risk-flagged: a human must approve'], rel:[null,null],
+   say:'All five ACs pass. Two risk signals match, so a human is asked.', term:['$ launching: reviewer (attempt 2)','+ all 5 ACs have a passing test','human_required: true','~ signals: multi_repo_ordered_deploy, touches_api_contract']},
+ {title:'Human approves the review', a:[R,AP,AP,AP,R,R,R,R,AP,M,M], l:['done','done','done','done','done','waiting'], n:['','','','','approved','needs acceptance'], status:['DEPLOYING','Deployed 0 of 2 repos'], rel:['waiting','waiting'],
+   say:'Gate 2, only because of risk. A low-risk ticket would skip it.', term:['$ human: approve review-report.md','+ approved (risk-flagged)','# deploy is CI/CD, not a lane']},
+ {title:'Deploy shop-api first', a:[R,AP,AP,AP,R,R,R,R,AP,M,M], l:['done','done','done','done','done','waiting'], n:['','','','','','needs acceptance'], status:['DEPLOYING','Deployed 1 of 2 repos'], rel:['deployed','waiting'],
+   say:'The order comes from tasks.md. Deploying shop-web first would be refused.', term:['$ ci_cd: deploy shop-api','+ merged wf/DEMO-1-run1 into main','+ tests on main pass → deployed']},
+ {title:'Deploy shop-web', a:[R,AP,AP,AP,R,R,R,R,AP,M,M], l:['done','done','done','done','done','waiting'], n:['','','','','','needs acceptance'], status:['AWAITING ACCEPTANCE','Both repos deployed'], rel:['deployed','deployed'],
+   say:'Second in the Release order.', term:['$ ci_cd: deploy shop-web','# order check: shop-api deployed first ✓','+ merged and deployed']},
+ {title:'Ticket accepted', a:[R,AP,AP,AP,R,R,R,R,AP,R,M], l:['done','done','done','done','done','ready'], n:['','','','','','trigger: ticket accepted'], status:['DONE','Accepted'], rel:['deployed','deployed'],
+   say:'The acceptance policy is still TBD, so the demo uses the suggested default and says so.', term:['$ human: accept ticket','# policy TBD → demo uses the suggested default','+ ticket_accepted: true  (evidence + sign-off)']},
+ {title:'Inspect & Adapt learns', a:[R,AP,AP,AP,R,R,R,R,AP,R,R], l:['done','done','done','done','done','done'], n:['','','','','','ledger L-2026-11-001 written'], status:['DONE','Ledger entry and overlay candidate written'], rel:['deployed','deployed'],
+   say:'It saw one rework loop caused by a missing null test, and wrote a small removable candidate for Dev.', term:['$ launching: inspect-adapt','[ia] 1 rework loop · cause: null case untested','+ ledger/L-2026-11-001.yaml','+ overlay/dev/L-2026-11-001.md  (advisory, removable)']},
+ {title:'Next ticket picks it up', a:[R,AP,AP,AP,R,R,R,R,AP,R,R], l:['done','done','done','done','done','done'], n:['','','','','','overlay active on DEMO-2'], status:['DEMO-2','Planning: next ticket, same flow'], rel:['deployed','deployed'],
+   say:'The next Dev session carries the candidate and is tagged with it, so tickets with and without it can be compared.', term:['$ wf_launch.py --ticket DEMO-2 --lane dev --print-env','OTEL_RESOURCE_ATTRIBUTES=workflow.ticket=DEMO-2,','  workflow.lane=dev,workflow.repo=shop-web,','~ workflow.overlay=L-2026-11-001']},
+];
+
+function termHtml(lines, lf){
+  const per = 22;
+  return lines.map((ln,i)=>{
+    const t = clamp((lf-8-i*per)/per,0,1);
+    if(t<=0) return '';
+    const c = ln[0];
+    const cls = c==='$'?'t-cmd':c==='+'?'t-ok':c==='!'?'t-bad':c==='~'?'t-warn':c==='#'?'t-note':'t-txt';
+    const n = Math.ceil(ln.length*t);
+    return `<div class="${cls}">${esc(ln.slice(0,n))}</div>`;
+  }).join('');
+}
+
+function sDemo(lf){
+  const intro = lf < 90;
+  const idx = intro ? 0 : 1 + Math.floor((lf-90)/150);
+  const sl = intro ? lf : (lf-90) % 150;
+  const st = STEPS[Math.min(idx,13)];
+  const flash = intro ? 1 : 1 - clamp(sl/24,0,1);
+  const prev = STEPS[Math.max(0, idx-1)];
+  const s0 = st.status[0];
+  const stCol = s0.startsWith('DONE')?'var(--green)':s0.startsWith('DEMO')?'var(--violet)':(s0==='PLANNING'||s0==='NO TICKET')?'var(--blue)':s0==='BUILDING'?'var(--violet)':(s0==='VERIFYING'||s0==='IN REVIEW')?'var(--amber)':'var(--teal)';
+  const lanes = LN.map((n,i)=>{
+    const changed = idx>0 && (st.l[i]!==prev.l[i] || st.n[i]!==prev.n[i]);
+    return `<div style="display:flex;align-items:center;gap:18px;height:58px;padding:0 20px;border-radius:14px;background:${changed?`rgba(91,157,255,${(.18*flash).toFixed(3)})`:'transparent'}">
+      <div style="width:6px;height:36px;border-radius:3px;background:${LANE_COL[LK[i]]}"></div>
+      <div style="width:270px;font-size:27px;font-weight:700">${n}</div>
+      <div style="width:150px">${pill(st.l[i])}</div>
+      <div style="font-size:21px;color:var(--mute)">${esc(st.n[i]||'')}</div></div>`;}).join('');
+  const arts = A.map((k,i)=>{
+    const changed = idx>0 && st.a[i]!==prev.a[i];
+    const stt = st.a[i];
+    const extra = changed ? `box-shadow:0 0 ${(26*flash).toFixed(0)}px ${ST[stt].c}` : '';
+    return chip(ANAME[k], stt, `font-size:19px;padding:7px 12px;margin:5px 8px 5px 0;${extra}`);
+  }).join('');
+  const rel = st.rel.map((r,i)=>{
+    const nm = ['shop-api','shop-web'][i];
+    return `${i?'<span style="font-size:30px;color:var(--mute);margin:0 14px">→</span>':''}${r?chip(nm, r, 'font-size:21px'):chip(nm,'missing','font-size:21px;opacity:.5')}`;
+  }).join('');
+  const ledger = idx>=12 ? `<div style="margin-top:6px;${rise(sl,40,20,12)}">${chip('ledger/L-2026-11-001','approved','font-size:19px;border-color:var(--violet)')} ${chip('overlay/dev/L-2026-11-001','approved','font-size:19px;border-color:var(--violet)')}</div>` : '';
+  const dots = Array.from({length:14},(_,i)=>`<i class="dot" style="width:${i===idx?26:14}px;height:${i===idx?26:14}px;border-radius:${i===idx?9:50}%;background:${i<idx?'var(--green)':i===idx?'var(--blue)':'var(--grey)'}"></i>`).join('');
+  return `
+  <div class="abs" style="left:70px;top:36px;width:1780px;display:flex;align-items:center;justify-content:space-between">
+    <div><span class="lbl" style="color:var(--blue)">Live demo · DEMO-1 · show the tracking number</span>
+      <div style="font-size:50px;font-weight:800;letter-spacing:-1px;margin-top:6px">${idx===0?'Setup':'Step '+idx+'/13'}: ${st.title}</div></div>
+    <div style="text-align:right"><div class="lbl">Ticket status (derived)</div>
+      <div style="font-size:44px;font-weight:800;color:${stCol};margin-top:4px">${s0}</div></div>
+  </div>
+  <div class="abs card" style="left:70px;top:170px;width:1090px;height:452px;padding:18px 14px">
+    <div class="lbl" style="margin:6px 20px 8px">Lanes</div>${lanes}
+  </div>
+  <div class="abs card" style="left:70px;top:638px;width:1090px;height:236px;padding:16px 28px">
+    <div class="lbl" style="margin-bottom:10px">Artifacts</div>${arts}${ledger}
+  </div>
+  <div class="abs card" style="left:70px;top:890px;width:1090px;height:92px;padding:0 28px;display:flex;align-items:center">
+    <span class="lbl" style="margin-right:26px">Release order</span>${rel}
+    <span style="margin-left:auto;font-size:21px;color:var(--mute);text-align:right;max-width:330px;line-height:1.2">${esc(st.status[1])}</span>
+  </div>
+  <div class="abs term" style="left:1190px;top:170px;width:660px;height:812px">${termHtml(st.term, sl)}</div>
+  <div class="abs" style="left:70px;top:1005px;width:1780px;display:flex;align-items:center;gap:30px">
+    <div style="display:flex;align-items:center;gap:8px">${dots}</div>
+    <div style="font-size:27px;color:#d4d9f2;${rise(sl,30,18,10)}">${esc(st.say)}</div>
+  </div>`;
+}
+
+function sNext(lf){
+  const col=(x,s,t,color,items)=>`<div class="abs card" style="left:${x}px;top:240px;width:540px;height:640px;${rise(lf,s)};border-color:${color}88">
+    <div class="abs lbl" style="left:36px;top:34px;color:${color}">${t}</div>
+    <div class="abs" style="left:36px;top:96px;width:470px;font-size:27px;line-height:1.5;color:#d4d9f2">${items.map((it,i)=>`<div style="margin-bottom:22px;opacity:${prog(lf,s+20+i*20,16).toFixed(3)}">${it}</div>`).join('')}</div></div>`;
+  return `
+  <div class="abs h2" style="left:100px;top:70px;${rise(lf,0)}">The skeleton runs. Now make it yours.</div>
+  <div class="abs sub" style="left:104px;top:160px;${rise(lf,8)}">Each dev and QE improves the lane they know best.</div>
+  ${col(100,20,'Placeholders to improve','var(--blue)',['<b>Cross-repo tests</b><br><span style="color:var(--mute)">owner: QE</span>','<b>Release order, partial failure, rollback</b><br><span style="color:var(--mute)">owner: Dev</span>','<b>Lane instructions</b><br><span style="color:var(--mute)">owner: everyone</span>','<b>Risk thresholds</b><br><span style="color:var(--mute)">owner: Reviewers</span>'])}
+  ${col(690,50,'Not built yet','var(--amber)',['Orchestrator write side: leases, applying proposed events','Auto-revert and ledger tooling for the retro','PI-level capacity view','Acceptance policy and real budgets (TBD)'])}
+  ${col(1280,80,'Proposed next','var(--green)',['Pilot on one real spike','Check real Copilot telemetry fields and credits','Each lane gets an owner','Then a real story across two repos'])}`;
+}
+
+const RENDER = {title:sTitle, idea:sIdea, lanes:sLanes, status:sStatus, gates:sGates, learn:sLearn, demo:sDemo, next:sNext};
+
+function sceneAt(frame){
+  for(let i=SCENES.length-1;i>=0;i--) if(frame>=SCENES[i].start) return i;
+  return 0;
+}
+function render(frame){
+  frame = clamp(Math.floor(frame),0,TOTAL-1);
+  const i = sceneAt(frame), sc = SCENES[i], lf = frame - sc.start;
+  const o = (i===0 && lf<10) ? 1 : Math.min(clamp(lf/10,0,1), clamp((sc.d-1-lf)/10,0,1));
+  stage.innerHTML = `<div style="position:absolute;inset:0;opacity:${o.toFixed(3)}">${RENDER[sc.id](lf)}</div>`;
+  return i;
+}
+
+/* ---------------------------------------------------------------- player */
+const stage = document.getElementById('stage'), viewport = document.getElementById('viewport');
+const scrub = document.getElementById('scrub'), timeEl = document.getElementById('time'), playBtn = document.getElementById('play');
+const chips = document.getElementById('chips'), speedBtn = document.getElementById('speed');
+const q = new URLSearchParams(location.search);
+let frame = +q.get('frame') || 0, playing = !(q.has('frame') || q.get('autoplay')==='0'), speed = 1, lastT = 0, accF = 0, lastShown = -1, lastScene = -1;
+if(q.get('controls')==='0') document.getElementById('controls').style.display='none';
+scrub.max = TOTAL-1;
+SCENES.forEach((s,i)=>{const b=document.createElement('button');b.textContent=s.name;b.onclick=()=>{frame=s.start;draw(true)};chips.appendChild(b);});
+function fmt(f){const s=Math.floor(f/FPS);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
+function draw(force){
+  const f = Math.floor(frame);
+  if(f!==lastShown || force){
+    const si = render(f); lastShown = f;
+    scrub.value = f; timeEl.textContent = fmt(f)+' / '+fmt(TOTAL);
+    if(si!==lastScene){ [...chips.children].forEach((b,k)=>b.classList.toggle('on',k===si)); lastScene=si; }
+  }
+}
+function fit(){
+  const wrap = document.getElementById('frameWrap'), w = wrap.clientWidth, h = wrap.clientHeight;
+  const s = Math.min(w/1920, h/1080);
+  viewport.style.width = 1920*s+'px'; viewport.style.height = 1080*s+'px';
+  stage.style.transform = `scale(${s})`;
+}
+function tick(t){
+  if(playing){
+    if(lastT){ accF += (t-lastT)/1000*FPS*speed; if(accF>=1){ const n=Math.floor(accF); accF-=n; frame += n; } }
+    if(frame>=TOTAL-1){ frame=TOTAL-1; playing=false; playBtn.textContent='Play'; }
+  }
+  lastT = t; draw(false); requestAnimationFrame(tick);
+}
+playBtn.onclick = ()=>{ if(frame>=TOTAL-1) frame=0; playing=!playing; playBtn.textContent=playing?'Pause':'Play'; };
+document.getElementById('restart').onclick = ()=>{ frame=0; playing=true; playBtn.textContent='Pause'; };
+scrub.oninput = ()=>{ frame=+scrub.value; draw(true); };
+speedBtn.onclick = ()=>{ speed = speed===1?1.5:speed===1.5?2:speed===2?.5:1; speedBtn.textContent=speed+'x'; };
+addEventListener('keydown',e=>{
+  if(e.code==='Space'){ e.preventDefault(); playBtn.click(); }
+  else if(e.code==='ArrowRight'){ frame=Math.min(TOTAL-1,frame+(e.shiftKey?5:1)*FPS); draw(true); }
+  else if(e.code==='ArrowLeft'){ frame=Math.max(0,frame-(e.shiftKey?5:1)*FPS); draw(true); }
+  else if(e.code==='Home'){ frame=0; draw(true); }
+});
+addEventListener('resize',fit);
+playBtn.textContent = playing?'Pause':'Play';
+fit(); draw(true); requestAnimationFrame(tick);
+</script>
+</body>
+</html>

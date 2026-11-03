@@ -72,6 +72,8 @@ python scripts/wf_status.py --all                    # one line per work item
 
 To see a whole ticket run without real repos or agents: `python demo/demo.py setup`, then `python demo/demo.py next` once per step. It uses two fake repos and scripted stand-in agents, in a separate git-ignored workspace. A talk track is in [demo/WALKTHROUGH.md](demo/WALKTHROUGH.md).
 
+An animated overview with the demo (about 2 minutes, open in a browser) is in [docs/presentation/workflow-animation.html](docs/presentation/workflow-animation.html).
+
 `wf_launch.py` turns on the Copilot OTel file exporter, tags the session with `workflow.*` attributes (ticket, kind, run, lane, repo, attempt, launch_id, active overlay candidates), writes the dump under `otel-dump/`, and logs `lane_started` and `lane_exited` in `events.log`. `otel_check.py` verifies the attributes and token counts and writes a summary to the ticket's `metrics/` folder. Run it after every lane session; `missing` or `incomplete` stops Inspect & Adapt from drawing conclusions about that lane.
 
 For VS Code sessions, attributes are per window, not per lane. Use `--print-env` to see the variables, or record the `session.id` for the lane in `events.log` and join on it.
