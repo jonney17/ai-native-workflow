@@ -1,0 +1,20 @@
+# One file per ledger entry: ledger/L-YYYY-MM-NNN.yaml (one file per entry avoids merge conflicts).
+# Written by Inspect & Adapt. Status changes by the auto-revert script or by the sprint retro.
+id: L-2026-11-001
+created: 2026-11-03
+ticket: PROJ-123
+kind: story                    # kind of the ticket the evidence comes from
+run: 1
+lane: planner                  # the lane this candidate changes
+observation: "Spec gap found at verify: error handling for empty input"
+evidence:                      # required; ticket artifacts and telemetry
+  - tickets/PROJ-123/run-1/artifacts/verify-report.md
+  - tickets/PROJ-123/run-1/metrics/dev-repo-a-a1.json
+candidate:
+  target: overlay/planner/L-2026-11-001.md
+  change: "Add checklist item: list behavior for empty and invalid inputs"
+status: active                 # active | reverted | promoted | rejected | expired
+active_on: []                  # tickets that ran with this candidate
+outcome: {}                    # for example { rework_loops: "2 -> 0", cost_delta: "-8%" }
+retro_decision: null           # promote | keep | reject
+retro_reason: null
