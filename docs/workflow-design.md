@@ -245,7 +245,8 @@ docs/        this document
 - Config, lane instructions, ticket and ledger templates for all three kinds.
 - Scripts to create a work item, launch a lane session with telemetry tags (starting in the right repo folder), and check the telemetry. Tested on synthetic data.
 - A repo registry with per-developer local paths, and a declared release order per ticket.
-- A read-only status script (`wf_status.py`): from a ticket's manifest and the lane contracts it derives artifact staleness, lane states, the ticket status, and the next actions. It is the first slice of the orchestrator and is useful for a live demo, since it shows what is ready, what is stale and who has to act.
+- Templates for the artifacts that scripts or gates read by structure (`spec.md`, `tasks.md`, `test-plan.md`, `verify-report.md`, `review-report.md`), under `skills/<lane>/templates/`. Each marks the machine-read parts; `design.md` has none on purpose.
+- A read-only status script (`wf_status.py`): from a ticket's manifest and the lane contracts it derives artifact staleness, lane states, the ticket status, and the next actions. It also warns when a machine-read part of an artifact is missing, for example `deploy_order` in `tasks.md` or `human_required` in `review-report.md`. It is the first slice of the orchestrator and is useful for a live demo, since it shows what is ready, what is stale and who has to act.
 - A demo kit (`demo/`): one story across two fake repos, run step by step with scripted stand-in agents through the real launcher, status and telemetry scripts. It shows parallel lanes, a verify failure with a one-repo rework, staleness, risk-flagged review, ordered deploy, acceptance, and the Inspect & Adapt ledger and overlay. The demo script plays the orchestrator and the human, and the telemetry numbers are synthetic.
 
 **Not built yet**

@@ -29,22 +29,25 @@ Repos involved are not named by the requester. The Planner finds them (shop-api,
 SPEC = """\
 # Spec: tracking number on the order page
 
+## Behavior
+Customers can see the carrier tracking number of a shipped order on the order page. Until the order ships the page says the number is not yet available.
+
 ## Acceptance criteria
-| Id   | Criterion |
-|------|-----------|
-| AC-1 | `GET order` returns `tracking_number` (string) for a shipped order. |
-| AC-2 | `GET order` returns `tracking_number: null` for an order that has not shipped. |
-| AC-3 | The order page prints `Tracking: <number>` for a shipped order. |
-| AC-4 | The order page prints `Tracking: not yet available` when the number is null. |
-| AC-5 | The order page also prints `Tracking: not yet available` when the field is missing (old API during a rolling deploy). |
+| Id   | Criterion (given / when / then) | PRD requirement | Source |
+|------|----------------------------------|-----------------|--------|
+| AC-1 | Given a shipped order, when the order is fetched, then `tracking_number` is a string. | PRD-7#R2 | J-1 |
+| AC-2 | Given an order that has not shipped, when it is fetched, then `tracking_number` is null. | PRD-7#R2 | J-1 |
+| AC-3 | Given a shipped order, when the order page is shown, then it prints `Tracking: <number>`. | PRD-7#R2 | J-2 |
+| AC-4 | Given a null tracking number, when the order page is shown, then it prints `Tracking: not yet available`. | PRD-7#R2 | J-3 |
+| AC-5 | Given an order without the field (old API during a rolling deploy), when the page is shown, then it prints `Tracking: not yet available`. | PRD-7#R2 | added |
 
 ## Traceability
-| Source id | Spec AC | Result  | Reason |
-|-----------|---------|---------|--------|
-| J-1       | AC-1, AC-2 | kept, split | one criterion became two testable ones |
-| J-2       | AC-3    | kept    | |
-| J-3       | AC-4    | kept    | |
-| (new)     | AC-5    | added   | the API and the web app are deployed one after the other, so the page must cope with the old response |
+| Source id | Spec AC    | Status  | Reason |
+|-----------|------------|---------|--------|
+| J-1       | AC-1, AC-2 | changed | one criterion became two testable ones |
+| J-2       | AC-3       | kept    | |
+| J-3       | AC-4       | kept    | |
+| none      | AC-5       | added   | the API and the web app are deployed one after the other, so the page must cope with the old response |
 
 ## Out of scope
 Carrier links, tracking history, e-mail notifications.
@@ -63,10 +66,11 @@ DESIGN = """\
 TASKS = """\
 # Tasks
 
-| Task | Repo | Covers |
-|------|------|--------|
-| T-1 Add `tracking_number` to the order response | shop-api | AC-1, AC-2 |
-| T-2 Render the tracking line on the order page | shop-web | AC-3, AC-4, AC-5 |
+## Tasks
+| Task | Repo | Covers | Depends on |
+|------|------|--------|------------|
+| T-1 Add `tracking_number` to the order response | shop-api | AC-1, AC-2 | none |
+| T-2 Render the tracking line on the order page | shop-web | AC-3, AC-4, AC-5 | T-1 (deploy order) |
 
 ## Release
 deploy_order: ordered
@@ -86,9 +90,12 @@ TEST_PLAN = """\
 | AC-4 | unit  | shop-web | tests/shop-web/test_acceptance.py::test_ac4_null_shows_not_yet_available |
 | AC-5 | unit  | shop-web | tests/shop-web/test_acceptance.py::test_ac5_missing_field_shows_not_yet_available |
 
-## Integration scenarios (placeholder: listed, run by hand)
+## Integration scenarios
 - Given the new API is live and the old web app is running, when a customer opens a shipped order, then the page still renders.
 - Given both are live, when a customer opens a shipped order, then the tracking number is visible.
+
+## Risks and gaps
+None. Integration scenarios are listed for a manual check (placeholder).
 """
 
 QE_TESTS = {

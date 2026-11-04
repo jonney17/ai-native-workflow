@@ -45,7 +45,7 @@ Metrics are compared only within the same kind. Hotfix is not supported yet.
 
 ```
 config/      lanes.yaml, repos.yaml, risk-rules.yaml, budgets.yaml, overlay-rules.yaml   (humans edit)
-skills/      team baseline instructions per lane, plus _common.md             (changed by retro promotion only)
+skills/      team baseline instructions per lane, plus _common.md and templates/ per lane  (changed by retro promotion only)
 overlay/     active candidates per lane                                        (written by Adapt)
 ledger/      one file per entry, template in _template.yaml
 tickets/     tickets/<TICKET>/run-<N>/ with manifest.yaml, events.log, decisions.md, artifacts/, metrics/
