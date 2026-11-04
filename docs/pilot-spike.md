@@ -25,7 +25,7 @@ A real question with a decision behind it, small enough for a few hours of agent
    `python3 .\scripts\wf_launch.py --ticket SPIKE-1 --run 1 --lane planner -- copilot <your usual arguments>`
    Give the agent this as its first instruction (adjust the ticket id):
 
-   > You are the Planner lane for ticket SPIKE-1, run 1, kind spike. Read `skills/_common.md`, then `skills/planner/instructions.md` (the spike section), then `tickets/SPIKE-1/run-1/artifacts/ticket-context.md`. Investigate the question. The repos you may read are in the environment variable WF_REPO_PATHS. Write only `tickets/SPIKE-1/run-1/artifacts/findings.md`, in the format the instructions describe. Do not edit `manifest.yaml`, anything in `config/` or `skills/`. If you are blocked, append a `question_raised` line to `events.log` and stop. Stop at the time box.
+   > You are the Planner lane for ticket SPIKE-1, run 1, kind spike. Read `skills/_common.md`, then `.github/agents/wf-planner.agent.md` (the spike section), then `tickets/SPIKE-1/run-1/artifacts/ticket-context.md`. Investigate the question. The repos you may read are in the environment variable WF_REPO_PATHS. Write only `tickets/SPIKE-1/run-1/artifacts/findings.md`, in the format the instructions describe. Do not edit `manifest.yaml`, anything in `config/` or `skills/`. If you are blocked, append a `question_raised` line to `events.log` and stop. Stop at the time box.
 
 6. **Check the telemetry** as soon as the session ends:
    `python3 .\scripts\otel_check.py --ticket SPIKE-1 --run 1 --lane planner`

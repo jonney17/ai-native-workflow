@@ -46,11 +46,10 @@ The workers stop at a human gate and `start` prints the exact command. Nothing i
 
 Each lane is a Copilot **custom agent**, not a prompt. The role, the rules and the allowed tools live in `.github/agents/wf-<lane>.agent.md`; the task message only says which work item to do it for.
 
-- **Source of truth:** `skills/_common.md` + `skills/<lane>/instructions.md` (what the agent does) and `config/agents.yaml` (description and allowed `tools` per lane, optional `model`). Do not edit the generated files.
-- **Build:** `python scripts/build_agents.py` writes the five agent files; `--check` fails if they are out of date. `wf_run.py start` warns when they are.
+- **The agent file is the lane's instructions.** Edit `.github/agents/wf-<lane>.agent.md` directly: the frontmatter sets the description and the allowed `tools` (and optionally `model`), the body is what the lane does. There is no build step. Rules shared by every lane stay in `skills/_common.md`, which each agent reads first; artifact templates stay in `skills/<lane>/templates/`.
 - **Launch:** `copilot --agent wf-<lane> -p "<task>" --allow-all-tools --no-ask-user --add-dir <root> ...` (see `config/runner.yaml`; print the exact command with `wf_run.py command --ticket T --lane L [--repo R]`). `--add-dir <root>` is what lets a Dev session running inside a repo still find the agents.
 - **Permissions are enforced by the agent's `tools`:** for example the Planner has no shell, so a spike cannot run commands. Per-lane extras (`--deny-tool`, `--max-ai-credits`) go under `agent.by_lane`.
-- **Unverified:** the agent file format and the tool aliases (`read`, `search`, `edit`, `execute`) follow GitHub's custom agent format as I know it, and `--agent wf-planner` has not been run yet. First check: `copilot --agent wf-planner -p "say your lane and the tools you have" --allow-all-tools`. If it does not load, the fix is in one function, `render()` in `build_agents.py`.
+- **Unverified:** the agent file format and the tool aliases (`read`, `search`, `edit`, `execute`) follow GitHub's custom agent format as I know it, and `--agent wf-planner` has not been run yet. First check: `copilot --agent wf-planner -p "say your lane and the tools you have" --allow-all-tools`. If it does not load, the frontmatter of the five agent files is what to adjust.
 
 To use any other command, set `WF_AGENT_CMD` (a JSON list); the demo does this to use scripted stub agents.
 

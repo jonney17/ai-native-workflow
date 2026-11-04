@@ -12,7 +12,7 @@ agent:
   command:
     - copilot
     - --agent
-    - "wf-{lane}"                  # the lane's role: .github/agents/wf-<lane>.agent.md, built by scripts/build_agents.py
+    - "wf-{lane}"                  # the lane's role and tools: .github/agents/wf-<lane>.agent.md (edit that file)
     - -p
     - "{prompt}"                   # only the task: which work item. The role is not in the prompt.
     - --allow-all-tools            # required for non-interactive mode

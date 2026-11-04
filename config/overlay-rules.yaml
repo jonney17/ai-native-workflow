@@ -9,7 +9,8 @@ editable_content:              # advisory content only
   - examples
 forbidden_paths:               # Adapt can never write here
   - config/**
-  - skills/**                  # only retro promotion moves a candidate into skills/
+  - skills/**                  # shared rules and templates; only retro promotion changes them
+  - .github/agents/**          # the lane agents (baseline instructions); only retro promotion changes them
   - tickets/**/manifest.yaml
 
 limits:

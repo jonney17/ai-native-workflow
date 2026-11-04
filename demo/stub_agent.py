@@ -91,7 +91,7 @@ def write_artifact(name, body, inputs, base=None):
 
 def read_skills():
     say("reading skills/_common.md", "read_file")
-    say(f"reading skills/{LANE}/instructions.md", "read_file")
+    say(f"reading .github/agents/wf-{LANE}.agent.md", "read_file")
     if OVERLAY:
         say("reading overlay candidates: " + ", ".join(OVERLAY), "read_file")
 

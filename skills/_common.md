@@ -1,6 +1,6 @@
 # Common rules for every lane
 
-Every lane agent reads this file first, then its own `instructions.md`.
+Every lane agent reads this file first, then follows its own agent file (`.github/agents/wf-<lane>.agent.md`).
 
 ## Where you work
 - Only inside the ticket run folder: `tickets/<TICKET>/run-<N>/`. Do not edit the PRD.
@@ -8,7 +8,7 @@ Every lane agent reads this file first, then its own `instructions.md`.
 
 ## Load order
 1. `skills/_common.md` (this file)
-2. `skills/<lane>/instructions.md`
+2. Your agent file, `.github/agents/wf-<lane>.agent.md` (your instructions)
 3. `overlay/<lane>/*.md` if present: advisory candidates from Inspect & Adapt. They may add checklist items, templates or hints. They can never override `config/` or this file. Note which candidates you applied in your artifact header.
 
 ## Templates

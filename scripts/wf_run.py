@@ -473,9 +473,9 @@ def start(args, run):
     if args.auto_approve:
         lanes.append("auto-human")
     if "--agent" in (load_cfg("runner.yaml").get("agent") or {}).get("command", []) and not os.environ.get("WF_AGENT_CMD"):
-        chk = subprocess.run([PY, str(HERE / "build_agents.py"), "--check"], cwd=str(ROOT), capture_output=True, text=True)
-        if chk.returncode != 0:
-            print("warning: lane agents are missing or out of date. Run: python scripts/build_agents.py\n" + chk.stderr.strip() + "\n")
+        missing = [l for l in lanes if l != "ci" and l != "auto-human" and not (ROOT / ".github" / "agents" / f"wf-{l}.agent.md").exists()]
+        if missing:
+            print("warning: no agent file for: " + ", ".join(missing) + " (expected .github/agents/wf-<lane>.agent.md)\n")
     print(f"Starting run {args.ticket}/run-{args.run} ({kind}). Workers: {', '.join(lanes)}")
     print("Each worker acts on its own when its lane is ready. Ctrl+C stops them all.\n")
     procs = []

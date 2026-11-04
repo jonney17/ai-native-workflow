@@ -219,7 +219,8 @@ Inspect & Adapt works from OpenTelemetry data of the Copilot sessions, so findin
 
 ```
 config/      lanes, repos, risk rules, budgets, overlay rules  (humans edit)
-skills/      team baseline instructions per lane               (changed only by retro promotion)
+skills/      shared rules (_common.md) and artifact templates  (changed only by retro promotion)
+.github/agents/  one Copilot agent per lane: its instructions and allowed tools  (changed only by retro promotion)
 overlay/     active candidates per lane                        (written by Adapt)
 ledger/      one file per entry
 tickets/     tickets/<ID>/run-<N>/ : manifest, events log, decisions, artifacts, metrics

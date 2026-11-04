@@ -18,7 +18,7 @@ Merge and deploy are plain CI/CD after review passes, not a lane. QE and Dev sta
 
 ## Learning loop
 
-When a ticket is accepted, Inspect & Adapt runs automatically, using the OTEL metrics of the lane sessions. It writes candidates to `overlay/` (a removable layer on top of `skills/`) and logs each one in `ledger/`. At every sprint retro the team reviews the whole ledger and decides what to promote into `skills/`. Limits for what Adapt may do are in `config/overlay-rules.yaml`.
+When a ticket is accepted, Inspect & Adapt runs automatically, using the OTEL metrics of the lane sessions. It writes candidates to `overlay/` (a removable layer on top of the lane agents in `.github/agents/`) and logs each one in `ledger/`. At every sprint retro the team reviews the whole ledger and decides what to promote into `skills/`. Limits for what Adapt may do are in `config/overlay-rules.yaml`.
 
 ## Multiple repos
 
@@ -45,7 +45,8 @@ Metrics are compared only within the same kind. Hotfix is not supported yet.
 
 ```
 config/      lanes.yaml, repos.yaml, risk-rules.yaml, budgets.yaml, overlay-rules.yaml   (humans edit)
-skills/      team baseline instructions per lane, plus _common.md and templates/ per lane  (changed by retro promotion only)
+skills/      _common.md (rules shared by every lane) and templates/ per lane  (changed by retro promotion only)
+.github/agents/  wf-<lane>.agent.md: each lane's instructions and allowed tools  (changed by retro promotion only)
 overlay/     active candidates per lane                                        (written by Adapt)
 ledger/      one file per entry, template in _template.yaml
 tickets/     tickets/<TICKET>/run-<N>/ with manifest.yaml, events.log, decisions.md, artifacts/, metrics/

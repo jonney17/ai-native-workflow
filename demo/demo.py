@@ -216,7 +216,7 @@ def setup(d):
     ws.mkdir(parents=True, exist_ok=True)
     (ws / MARKER).write_text("Created by demo/demo.py. Safe to delete.\n", encoding="utf-8")
     ignore = shutil.ignore_patterns("__pycache__", "*.pyc", ".gitkeep")
-    for name in ("config", "skills", "scripts"):
+    for name in ("config", "skills", "scripts", ".github"):
         shutil.copytree(PROJECT / name, ws / name, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "repos.local.yaml"))
     (ws / "tickets").mkdir()
     shutil.copytree(PROJECT / "tickets" / "_template", ws / "tickets" / "_template")
