@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>LEGO AI workflow: animated overview and demo</title>
+<title>AI-native workflow: animated overview and demo</title>
 <style>
 :root{
   --bg:#0e1120; --panel:#171b30; --panel2:#1e2340; --line:#2d3558; --text:#e9ecf8; --mute:#8d96bb;
@@ -128,7 +128,7 @@ function sTitle(lf){
   const lanes = [['Planner','planner'],['QE','qe'],['Dev','dev'],['Reviewer','reviewer'],['Inspect & Adapt','ia']];
   return `
   <div class="abs lbl" style="left:140px;top:150px;${rise(lf,0)}">Team LEGO</div>
-  <div class="abs h1" style="left:140px;top:210px;width:1500px;${rise(lf,6,22,40)}">LEGO AI workflow</div>
+  <div class="abs h1" style="left:140px;top:210px;width:1500px;${rise(lf,6,22,40)}">AI-native workflow</div>
   <div class="abs sub" style="left:144px;top:420px;width:1400px;line-height:1.4;${rise(lf,22)}">PI planning → PRD → tickets. Each ticket triggers one run of a flow where independent role agents share artifacts, instead of a fixed pipeline.</div>
   <div class="abs" style="left:140px;top:640px;display:flex;gap:22px">
     ${lanes.map(([n,k],i)=>`<div style="${rise(lf,40+i*9)};padding:20px 34px;border-radius:16px;font-size:34px;font-weight:700;border:3px solid ${LANE_COL[k]};color:${LANE_COL[k]};background:color-mix(in srgb, ${LANE_COL[k]} 12%, transparent)">${n}</div>`).join('')}
@@ -208,6 +208,7 @@ function sStatus(lf){
   <div class="abs card" style="left:100px;top:230px;width:1000px;height:700px;${rise(lf,8)}">
     <div class="abs lbl" style="left:40px;top:34px">Artifacts record the hash of their inputs</div>
     ${chain.map((n,i)=>`<div class="abs" style="left:40px;top:${110+i*88}px;display:flex;align-items:center;gap:18px">${chip(n, st(i), 'min-width:290px')}${pill(st(i))}</div>`).join('')}
+    <div class="abs mono" style="left:40px;top:636px;width:940px;font-size:20px;line-height:1.5;color:var(--mute);opacity:${prog(lf,40,20).toFixed(3)}">lanes.yaml (contracts) · manifest.yaml (hashes) · wf_status.py (derivation)</div>
     <div class="abs" style="left:640px;top:120px;width:330px;font-size:25px;line-height:1.5;color:#b8c0e6;opacity:${prog(lf,100,16).toFixed(3)}">QE, Dev and the Reviewer are built on the approved plan.</div>
     <div class="abs" style="left:640px;top:290px;width:330px;font-size:27px;line-height:1.45;color:var(--amber);font-weight:650;opacity:${prog(lf,150,16).toFixed(3)}">Someone edits the approved spec.md ...</div>
     <div class="abs" style="left:640px;top:440px;width:330px;font-size:25px;line-height:1.5;color:var(--amber);opacity:${prog(lf,190,20).toFixed(3)}">... and everything built on it is stale, each with its reason. Stale means re-queue.</div>
@@ -217,7 +218,7 @@ function sStatus(lf){
     ${ladder.map((n,i)=>`<div class="abs" style="left:40px;top:${110+i*76}px;display:flex;align-items:center;gap:18px;opacity:${i===li?1:.4}">
       <i class="dot" style="width:22px;height:22px;background:${i===li?(stale?'var(--amber)':'var(--green)'):'var(--grey)'}"></i>
       <span style="font-size:34px;font-weight:${i===li?750:500}">${n}</span></div>`).join('')}
-    <div class="abs" style="left:40px;top:650px;font-size:22px;color:var(--mute);width:580px">Computed from lane and artifact states by wf_status.py</div>
+    <div class="abs" style="left:40px;top:628px;font-size:20px;line-height:1.45;color:var(--mute);width:580px">Computed from lane and artifact states by wf_status.py (read-only). Applying the transitions is not built yet.</div>
   </div>`;
 }
 
