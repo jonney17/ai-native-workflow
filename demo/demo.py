@@ -11,6 +11,7 @@ Usage (from the project root):
   python demo/demo.py next             run the next step, then show the ticket status
   python demo/demo.py run              run all remaining steps, pausing between them
   python demo/demo.py status           show the ticket status now
+  python demo/demo.py auto             fresh workspace, then ONE trigger: lane workers run the whole story on their own
   python demo/demo.py stale on|off     edit the approved spec to show the stale cascade, then undo
   python demo/demo.py reset            wipe the workspace and start over
 
@@ -437,6 +438,30 @@ def do_step(d, n, pause=False):
         d.script("wf_status.py", "--all")
 
 
+def auto(d, args):
+    """One trigger: lane workers (scripts/wf_run.py) run the whole story. The stub agents stand in for Copilot."""
+    setup(d)
+    print("\nIntake (a person would do this):")
+    step_intake(d)
+    d.script("wf_run.py", "ready", "--ticket", T, "--by", "demo-human")
+    env = {**os.environ, "DEMO_WORKSPACE": str(d.ws), "DEMO_PACE": "0" if args.fast else "0.3",
+           "PYTHONIOENCODING": "utf-8", "PYTHONDONTWRITEBYTECODE": "1",
+           "WF_AGENT_CMD": json.dumps([PY, str(HERE / "stub_agent.py")]),
+           "WF_DEPLOY_CMD": json.dumps([PY, str(HERE / "ci_deploy.py"), "--workspace", str(d.ws), "--ticket", T, "--repo", "{repo}"])}
+    cmd = [PY, str(d.ws / "scripts" / "wf_run.py"), "start", "--ticket", T, "--verbose"]
+    if not args.gates_by_hand:
+        cmd.append("--auto-approve")
+    else:
+        print("\nGates are yours. In another terminal, from the workspace folder:\n"
+              f"  cd {d.ws}\n  python scripts/wf_run.py approve --ticket {T} --gate planner\n"
+              f"  python scripts/wf_run.py approve --ticket {T} --gate reviewer\n"
+              f"  python scripts/wf_run.py accept --ticket {T}\n")
+    print("$ " + " ".join(cmd[1:]) + "\n")
+    code = subprocess.call(cmd, cwd=d.ws, env=env)
+    d.status()
+    return code
+
+
 def stale(d, mode):
     p = d.art / "spec.md"
     backup = d.ws / ".spec_backup"
@@ -462,16 +487,19 @@ def stale(d, mode):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("command", choices=["setup", "reset", "list", "next", "run", "status", "stale"])
+    ap.add_argument("command", choices=["setup", "reset", "list", "next", "run", "status", "stale", "auto"])
     ap.add_argument("arg", nargs="?", help="stale: on | off")
     ap.add_argument("--workspace", default=str(HERE / "workspace"))
     ap.add_argument("--fast", action="store_true", help="no delays and no pauses")
     ap.add_argument("--no-pause", action="store_true", help="run: do not wait for Enter between steps")
+    ap.add_argument("--gates-by-hand", action="store_true", help="auto: do not play the human; approve with scripts/wf_run.py yourself")
     args = ap.parse_args()
     d = Demo(Path(args.workspace).resolve(), args.fast)
 
     if args.command in ("setup", "reset"):
         return setup(d)
+    if args.command == "auto":
+        return auto(d, args)
     if args.command == "list":
         return list_steps(d)
     d.require_ws()

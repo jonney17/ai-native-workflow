@@ -65,6 +65,19 @@ kinds:
     no_code_no_tests_no_deploy: true
     pi_tracking: capacity only, tagged by origin
 
+# What each artifact is built from. The orchestrator records these hashes when it marks an artifact ready,
+# so a later change to any of them makes it stale. Keys are artifact names; `changes` is the folder of all repos.
+artifact_inputs:
+  spec.md: [ticket-context.md]
+  design.md: [ticket-context.md, spec.md]
+  tasks.md: [ticket-context.md, spec.md, design.md]
+  findings.md: [ticket-context.md]
+  test-plan.md: [spec.md, tasks.md]
+  changes: [spec.md, design.md, tasks.md]
+  verify-report.md: [test-plan.md, changes]
+  review-report.md: [test-plan.md, changes]
+  inspection-report.md: [review-report.md]
+
 # Not a lane: merge and deploy are plain CI/CD after review passes.
 system_steps:
   deploy:

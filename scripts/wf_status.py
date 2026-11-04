@@ -24,6 +24,7 @@ import hashlib
 import json
 import re
 import sys
+import time
 from collections import Counter
 from pathlib import Path
 
@@ -47,10 +48,16 @@ class StatusError(Exception):
 # ---------------------------------------------------------------- reading
 
 def load_yaml(path):
-    try:
-        data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except yaml.YAMLError as e:
-        raise StatusError(f"cannot parse {path.name}: {e}")
+    # A worker may be replacing the manifest right now (it writes atomically, but Windows can briefly refuse
+    # a read), so retry a few times before reporting a problem.
+    for attempt in range(6):
+        try:
+            data = yaml.safe_load(path.read_text(encoding="utf-8"))
+            break
+        except (OSError, yaml.YAMLError) as e:
+            if attempt == 5:
+                raise StatusError(f"cannot read {path.name}: {e}")
+            time.sleep(0.1)
     return data if isinstance(data, dict) else {}
 
 
@@ -102,6 +109,11 @@ def read_events(path):
                 detail = {"raw": parts[3]}
         events.append({"time": parts[0], "actor": parts[1], "event": parts[2], "detail": detail})
     return events
+
+
+def proposal_id(e):
+    """Stable id of a proposed event, used by the orchestrator side to record that it applied it."""
+    return hashlib.sha1((e["time"] + e["actor"] + e["event"] + json.dumps(e["detail"], sort_keys=True)).encode()).hexdigest()[:10]
 
 
 def telemetry(run_dir, events):
@@ -506,7 +518,7 @@ def next_actions(ticket, run, kind, lanes, gates, view, manifest, dev_repos, rel
         return cmd + f" --attempt {n} -- <your copilot command>"
 
     if view["ticket-context.md"]["status"] not in OK:
-        acts.append(("human", f"Fill artifacts/ticket-context.md and set its status to ready (it is {view['ticket-context.md']['status']})"))
+        acts.append(("human", f"Fill artifacts/ticket-context.md, then: python scripts/wf_run.py ready --ticket {ticket} (it is {view['ticket-context.md']['status']})"))
     for lane, rec in lanes.items():
         s = rec["state"]
         if lane == "dev" and rec["repos"]:
@@ -525,12 +537,16 @@ def next_actions(ticket, run, kind, lanes, gates, view, manifest, dev_repos, rel
     if pg == "awaiting_approval":
         names = ", ".join((gates["planner"])["artifacts"])
         what = "Review the findings" if kind == "spike" else "Review the plan, including the traceability table,"
-        acts.append(("human", f"{what} and set {names} to approved in manifest.yaml (add approved_by)"))
+        acts.append(("human", f"{what} ({names}), then: python scripts/wf_run.py approve --ticket {ticket} --gate planner   (or reject --reason ...)"))
     rg = (gates.get("reviewer") or {}).get("state")
     if rg == "awaiting_approval":
-        acts.append(("human", "Review the change (risk-flagged) and set review-report.md to approved (or rejected) in manifest.yaml"))
+        acts.append(("human", f"Review the change (risk-flagged), then: python scripts/wf_run.py approve --ticket {ticket} --gate reviewer   (or reject --reason ...)"))
     if rg == "needs_risk_decision":
         acts.append(("human", "Evaluate config/risk-rules.yaml and set review.human_required to true or false in manifest.yaml"))
+
+    for lane, rec in lanes.items():
+        if rec["state"] == "blocked":
+            acts.append(("human", f"{lane} is blocked on a question (see question_raised in events.log). Answer it, then: python scripts/wf_run.py answer --ticket {ticket} --lane {lane} --text \"...\""))
 
     if status == "Deploying":
         order = [str(x) for x in ((manifest.get("release") or {}).get("sequence") or [])]
@@ -539,9 +555,9 @@ def next_actions(ticket, run, kind, lanes, gates, view, manifest, dev_repos, rel
         if todo:
             tail = f" (ordered: {' -> '.join(order)})" if mode == "ordered" and order else ""
             nxt = todo[0] if mode == "ordered" else ", ".join(todo)
-            acts.append(("ci/cd", f"Merge and deploy {nxt}{tail}; record merged or deployed under release.repos"))
+            acts.append(("ci/cd", f"Merge and deploy {nxt}{tail}; record it: python scripts/wf_run.py deployed --ticket {ticket} --repo <name>"))
     if status == "Awaiting acceptance":
-        acts.append(("human", "Decide acceptance, then set acceptance.ticket_accepted: true (policy is TBD)"))
+        acts.append(("human", f"Decide acceptance (policy is TBD), then: python scripts/wf_run.py accept --ticket {ticket}"))
 
     for lane, runs in tele.items():
         unchecked = [t for t in runs if t["otel"] == "not checked"]
@@ -692,7 +708,8 @@ def analyze(ticket, run=None):
         tasks_hint = [n for n in registry if re.search(r"(?<![\w-])" + re.escape(n) + r"(?![\w-])", text)]
 
     actions = next_actions(ticket, run, kind, lanes, gates, view, manifest, dev_repos, relrepos, tele, status, tasks_hint)
-    proposals = [e for e in events if e["event"] in PROPOSALS][-5:]
+    applied = {e["detail"].get("id") for e in events if e["event"] == "proposal_applied"}
+    proposals = [e for e in events if e["event"] in PROPOSALS and proposal_id(e) not in applied][-5:]
 
     arts_out = {}
     for name, v in view.items():

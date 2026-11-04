@@ -89,6 +89,6 @@ Confirmed: lanes and names, artifact-driven readiness, derived ticket status, ov
 - **Ticket status:** Planning, Building, Verifying, In review, Deploying, Awaiting acceptance, Done, Needs input, Escalated (spikes: Investigating, Awaiting findings review).
 - **Risk decision.** The Reviewer's decision lives in `review.human_required` (true or false). Until it is set, a ready review shows as waiting for that decision.
 
-Not built yet: the write side of the orchestrator (leases, applying proposed events, updating the manifest, the `next-tasks` queue). Today the manifest is edited by hand, and `wf_status.py` shows what to edit.
+The write side is `scripts/wf_state.py` (manifest, events, leases) and `scripts/wf_run.py` (lane workers and the human commands). See [docs/running-a-run.md](docs/running-a-run.md). Try it on the scripted agents with `python demo/demo.py auto`: one command, and every lane works on its own. Not built yet: auto-revert of overlays, the `next-tasks` queue, and anything that needs the real acceptance policy.
 
 Open: acceptance policy (suggested default in `manifest.yaml`). Confirmed on one real Copilot CLI dump: the `workflow.*` tags arrive as resource attributes, the session id is `gen_ai.conversation.id`, and per-call `github.copilot.cost` and `github.copilot.nano_aiu` are present. Still to confirm: how `nano_aiu` maps to billing, and VS Code and IntelliJ sessions.

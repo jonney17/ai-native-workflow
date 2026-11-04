@@ -251,7 +251,7 @@ docs/        this document
 
 **Not built yet**
 
-- The write side of the orchestrator: leases, applying proposed events, updating the manifest. Status derivation, staleness and the "what is ready" query already exist in read-only form. Today the manifest is edited by hand.
+- The write side of the orchestrator exists as lane workers (`wf_run.py`, `wf_state.py`): leases, applying proposed events, updating the manifest, a CI/CD stand-in, human gate commands. It runs the whole DEMO-1 story from one trigger on the scripted agents. It has not run a real Copilot story yet; the Copilot command in `config/runner.yaml` is unverified.
 - The auto-revert script and the ledger tooling for the retro.
 - PI-level tracking and capacity reporting for chores and spikes.
 
@@ -280,7 +280,7 @@ These work in a simple form so the skeleton is runnable end to end. Each one is 
 
 1. **Pilot one real story** through the launcher and the check script. Confirm the telemetry fields, and note how long the spec waited for approval.
 2. **Run one sprint** with the manual manifest, to see whether the lanes and artifacts fit how the team works.
-3. **Build the orchestrator** on what the pilot showed.
+3. **Build the orchestrator** on what the pilot showed. (Lane workers are built and proven on the scripted agents; next is a real run.)
 4. **First retro with a ledger**, reviewing the first Inspect & Adapt candidates and deciding what to promote.
 5. **Set real budgets and the acceptance policy** from the collected data.
 
