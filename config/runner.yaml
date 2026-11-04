@@ -11,8 +11,10 @@ agent:
   # environment variable WF_AGENT_CMD (a JSON list), for example to use the demo's scripted stub agent.
   command:
     - copilot
+    - --agent
+    - "wf-{lane}"                  # the lane's role: .github/agents/wf-<lane>.agent.md, built by scripts/build_agents.py
     - -p
-    - "{prompt}"
+    - "{prompt}"                   # only the task: which work item. The role is not in the prompt.
     - --allow-all-tools            # required for non-interactive mode
     - --no-ask-user                # the lane must not wait for an answer; it proposes question_raised instead
     - --trust-folder               # trust this folder's skills and instructions for this one session
@@ -28,12 +30,11 @@ agent:
   by_lane: {}
 
 prompt: |
-  You are the {lane} lane{repo_phrase} of workflow run {ticket}/run-{run}, attempt {attempt}.
-  Read {root}/skills/_common.md and {root}/skills/{lane}/instructions.md first and follow them exactly.
-  Work item folder: {run_dir}. Read what you need from {run_dir}/artifacts and write only the artifacts of your lane.
-  Do not edit manifest.yaml. Append any proposed event to {run_dir}/events.log as the instructions say.
-  You cannot ask questions. If you are blocked, append question_raised and stop.
-  Stop when your lane's artifacts are written.
+  Do your lane's work for this work item.
+  root: {root}
+  run_dir: {run_dir}
+  ticket: {ticket}, run: {run}, attempt: {attempt}{repo_line}
+  Follow your agent instructions. They say what to read and what to write.
 
 deploy:
   # CI/CD stand-in, run once per repo in the Release order after the review passes.

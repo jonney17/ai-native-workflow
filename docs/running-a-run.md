@@ -42,9 +42,17 @@ The workers stop at a human gate and `start` prints the exact command. Nothing i
 - **Release order:** the `ci` worker deploys in the order from `tasks.md` and stops on the first failure.
 - **Manifest writes** are atomic and locked; only workers and the commands above write it. Agents never do.
 
-## Agents
+## Agents: one per lane
 
-`config/runner.yaml` holds the command. The default is Copilot CLI in prompt mode (`copilot -p "<prompt>" --allow-all-tools --no-ask-user ...`) with the lane prompt built from the template there. **This command has not been run by the workers yet**; try it on a spike first. Per-lane flags (`--deny-tool`, `--max-ai-credits`, a custom `--agent`) go under `agent.by_lane`. To use any other command, set `WF_AGENT_CMD` (a JSON list).
+Each lane is a Copilot **custom agent**, not a prompt. The role, the rules and the allowed tools live in `.github/agents/wf-<lane>.agent.md`; the task message only says which work item to do it for.
+
+- **Source of truth:** `skills/_common.md` + `skills/<lane>/instructions.md` (what the agent does) and `config/agents.yaml` (description and allowed `tools` per lane, optional `model`). Do not edit the generated files.
+- **Build:** `python scripts/build_agents.py` writes the five agent files; `--check` fails if they are out of date. `wf_run.py start` warns when they are.
+- **Launch:** `copilot --agent wf-<lane> -p "<task>" --allow-all-tools --no-ask-user --add-dir <root> ...` (see `config/runner.yaml`; print the exact command with `wf_run.py command --ticket T --lane L [--repo R]`). `--add-dir <root>` is what lets a Dev session running inside a repo still find the agents.
+- **Permissions are enforced by the agent's `tools`:** for example the Planner has no shell, so a spike cannot run commands. Per-lane extras (`--deny-tool`, `--max-ai-credits`) go under `agent.by_lane`.
+- **Unverified:** the agent file format and the tool aliases (`read`, `search`, `edit`, `execute`) follow GitHub's custom agent format as I know it, and `--agent wf-planner` has not been run yet. First check: `copilot --agent wf-planner -p "say your lane and the tools you have" --allow-all-tools`. If it does not load, the fix is in one function, `render()` in `build_agents.py`.
+
+To use any other command, set `WF_AGENT_CMD` (a JSON list); the demo does this to use scripted stub agents.
 
 ## Try it without AI
 

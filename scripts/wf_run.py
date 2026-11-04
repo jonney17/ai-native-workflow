@@ -15,6 +15,7 @@ Commands (run from the project root):
   answer   --ticket T --lane L [--text TEXT]                   unblock a lane after a question_raised
   accept   --ticket T [--by NAME]                              human: the ticket is accepted
   deployed --ticket T --repo R                                 record a deploy done outside (CI/CD)
+  command  --ticket T --lane L [--repo R]                      print the agent command a worker would run
   status   --ticket T                                          same as wf_status.py
 
 --auto-approve plays the human at every gate. It is for testing the flow only.
@@ -62,7 +63,8 @@ def load_cfg(name, default=None):
 
 def agent_command(runner, run, lane, repo, attempt):
     fmt = {"lane": lane, "repo": repo, "ticket": run.ticket, "run": run.run, "attempt": attempt,
-           "root": str(ROOT), "run_dir": str(run.dir), "repo_phrase": f" for repo {repo}" if repo else ""}
+           "root": str(ROOT), "run_dir": str(run.dir), "repo_phrase": f" for repo {repo}" if repo else "",
+           "repo_line": f"\n  repo: {repo} (your working directory)" if repo else ""}
     prompt = str(runner.get("prompt", "")).format(**fmt)
     fmt2 = dict(fmt, prompt=prompt, repo="-" + repo if repo else "")
     override = os.environ.get("WF_AGENT_CMD")
@@ -385,7 +387,7 @@ def do_accept(run, by):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("command", choices=["start", "worker", "ready", "approve", "reject", "answer", "accept", "deployed", "status"])
+    ap.add_argument("command", choices=["start", "worker", "command", "ready", "approve", "reject", "answer", "accept", "deployed", "status"])
     ap.add_argument("--ticket", required=True)
     ap.add_argument("--run", type=int, default=None)
     ap.add_argument("--lane", default="")
@@ -415,6 +417,10 @@ def main():
         except KeyboardInterrupt:
             return
     run = W.Run(args.ticket, args.run)
+    if args.command == "command":
+        cmd = agent_command(load_cfg("runner.yaml"), run, args.lane or "planner", args.repo, run.attempts_done(args.lane or "planner", args.repo) + 1)
+        print(json.dumps(cmd, indent=2, ensure_ascii=False))
+        return
     if args.command == "start":
         return start(args, run)
     if args.command == "ready":
@@ -466,6 +472,10 @@ def start(args, run):
         lanes.append("ci")
     if args.auto_approve:
         lanes.append("auto-human")
+    if "--agent" in (load_cfg("runner.yaml").get("agent") or {}).get("command", []) and not os.environ.get("WF_AGENT_CMD"):
+        chk = subprocess.run([PY, str(HERE / "build_agents.py"), "--check"], cwd=str(ROOT), capture_output=True, text=True)
+        if chk.returncode != 0:
+            print("warning: lane agents are missing or out of date. Run: python scripts/build_agents.py\n" + chk.stderr.strip() + "\n")
     print(f"Starting run {args.ticket}/run-{args.run} ({kind}). Workers: {', '.join(lanes)}")
     print("Each worker acts on its own when its lane is ready. Ctrl+C stops them all.\n")
     procs = []
