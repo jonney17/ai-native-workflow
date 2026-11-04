@@ -122,7 +122,7 @@ Agents **propose** events (`spec_gap`, `verify_failed`, `review_rejected`, `ques
 |---|---|
 | Verify fails in one repo | Only that repo's Dev lane re-runs, with the report as input |
 | The spec turns out to be wrong | `spec_gap` re-queues the Planner; everything built on the old spec goes stale and re-runs |
-| The spec changes mid-build | Dependent artifacts go stale automatically; no one rewinds anything |
+| The spec changes mid-build | Dependent artifacts go stale automatically, including `design.md` and `tasks.md` (they record `spec.md` as an input); no one rewinds anything |
 | An agent hangs or crashes | Its lease expires and the work returns to the queue |
 | Retries or budget exhausted | The lane fails and the ticket escalates to a human |
 

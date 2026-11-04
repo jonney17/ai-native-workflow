@@ -195,7 +195,7 @@ function sStatus(lf){
     if(lf>=160){
       const k = lf-160;
       if(i===0) return 'stale';
-      if(i>=3 && k>=15*(i-1)) return 'stale';
+      if(i>=1 && k>=15*i) return 'stale';
     }
     if(i<3) return lf<20?'missing':lf<45?'draft':lf<75?'ready':'approved';
     return lf<95+i*8?'missing':lf<120+i*8?'draft':'ready';
@@ -209,7 +209,7 @@ function sStatus(lf){
     <div class="abs lbl" style="left:40px;top:34px">Artifacts record the hash of their inputs</div>
     ${chain.map((n,i)=>`<div class="abs" style="left:40px;top:${110+i*88}px;display:flex;align-items:center;gap:18px">${chip(n, st(i), 'min-width:290px')}${pill(st(i))}</div>`).join('')}
     <div class="abs mono" style="left:40px;top:636px;width:940px;font-size:20px;line-height:1.5;color:var(--mute);opacity:${prog(lf,40,20).toFixed(3)}">lanes.yaml (contracts) · manifest.yaml (hashes) · wf_status.py (derivation)</div>
-    <div class="abs" style="left:640px;top:120px;width:330px;font-size:25px;line-height:1.5;color:#b8c0e6;opacity:${prog(lf,100,16).toFixed(3)}">QE, Dev and the Reviewer are built on the approved plan.</div>
+    <div class="abs" style="left:640px;top:120px;width:330px;font-size:25px;line-height:1.5;color:#b8c0e6;opacity:${prog(lf,100,16).toFixed(3)}">Design and tasks are written from the spec. The rest is built on the approved plan.</div>
     <div class="abs" style="left:640px;top:290px;width:330px;font-size:27px;line-height:1.45;color:var(--amber);font-weight:650;opacity:${prog(lf,150,16).toFixed(3)}">Someone edits the approved spec.md ...</div>
     <div class="abs" style="left:640px;top:440px;width:330px;font-size:25px;line-height:1.5;color:var(--amber);opacity:${prog(lf,190,20).toFixed(3)}">... and everything built on it is stale, each with its reason. Stale means re-queue.</div>
   </div>

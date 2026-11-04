@@ -115,10 +115,9 @@ def planner():
     read_skills()
     say("reading ticket-context.md", "read_file")
     say("exploring the repos listed in the registry", "search_code")
-    ins = ["ticket-context.md"]
-    write_artifact("spec.md", C.SPEC, ins)
-    write_artifact("design.md", C.DESIGN, ins)
-    write_artifact("tasks.md", C.TASKS, ins)
+    write_artifact("spec.md", C.SPEC, ["ticket-context.md"])
+    write_artifact("design.md", C.DESIGN, ["ticket-context.md", "spec.md"])
+    write_artifact("tasks.md", C.TASKS, ["ticket-context.md", "spec.md", "design.md"])
     say("done: spec, design and tasks are ready; waiting for a human to approve them")
 
 

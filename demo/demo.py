@@ -268,8 +268,9 @@ def step_intake(d):
 
 def step_planner(d):
     d.launch_all([("planner", None, 1)])
-    for n in ("spec.md", "design.md", "tasks.md"):
-        d.mark(n, "ready", inputs=["ticket-context.md"])
+    d.mark("spec.md", "ready", inputs=["ticket-context.md"])
+    d.mark("design.md", "ready", inputs=["ticket-context.md", "spec.md"])
+    d.mark("tasks.md", "ready", inputs=["ticket-context.md", "spec.md", "design.md"])
     d.event("orchestrator", "artifacts_ready", {"artifacts": ["spec.md", "design.md", "tasks.md"]})
 
 

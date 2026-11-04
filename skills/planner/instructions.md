@@ -17,6 +17,15 @@ Turn a ticket and its PRD requirements into an approved plan. You explore first,
 5. **Write `tasks.md`.** One section per repo: tasks, dependencies, merge order, and which ACs each task covers. Repo names must match `config/repos.yaml`.
    End with a **Release** section: `deploy_order: independent` or `deploy_order: ordered`. If ordered, list the sequence and why (for example an API provider before its consumers).
 
+## Inputs between your own artifacts
+
+Your three artifacts depend on each other, so record that in each artifact header (`inputs:`):
+- `spec.md`: `ticket-context.md`
+- `design.md`: `ticket-context.md`, `spec.md`
+- `tasks.md`: `ticket-context.md`, `spec.md`, `design.md`
+
+This is what makes a changed spec put the design and the tasks in doubt: they become stale, and the three are approved again together. The same inputs are recorded in the manifest.
+
 ## Traceability table (required in `spec.md`)
 
 End `spec.md` with a section **Traceability**. The human reads it at the spec gate, so dropped or changed scenarios are caught before anything is built.
