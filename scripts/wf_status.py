@@ -554,6 +554,69 @@ def next_actions(ticket, run, kind, lanes, gates, view, manifest, dev_repos, rel
 
 # ---------------------------------------------------------------- analysis
 
+def body_of(path):
+    """File text without the artifact header (the --- block at the top)."""
+    text = path.read_text(encoding="utf-8", errors="replace")
+    if text.startswith("---"):
+        parts = text.split("---", 2)
+        if len(parts) == 3:
+            return parts[2]
+    return text
+
+
+def shape_warnings(run_dir, manifest, view, registry, warnings):
+    """Warn when a machine-read part of an artifact is missing. Read-only; templates are in skills/<lane>/templates/."""
+    def got(name):
+        v = view.get(name)
+        if not v or v["recorded"] == "missing":
+            return None
+        p = artifact_path(run_dir, name)
+        return body_of(p) if p is not None and p.is_file() else None
+
+    spec = got("spec.md")
+    ac_ids = []
+    if spec is not None:
+        ac_ids = sorted(set(re.findall(r"^\|\s*(AC-\d+)\s*\|", spec, re.M)), key=lambda a: int(a[3:]))
+        if not ac_ids:
+            warnings.append("spec.md: no acceptance criteria found (expected a table with ids AC-1, AC-2, ...)")
+        if not re.search(r"^#+\s*Traceability\b", spec, re.M | re.I):
+            warnings.append("spec.md: no Traceability section")
+    tasks = got("tasks.md")
+    if tasks is not None:
+        m = re.search(r"^deploy_order:\s*(\w+)", tasks, re.M)
+        if not m or m.group(1) not in ("independent", "ordered"):
+            warnings.append("tasks.md: the Release section needs a line 'deploy_order: independent' or 'deploy_order: ordered'")
+        elif m.group(1) == "ordered":
+            sq = re.search(r"^sequence:\s*(.+)$", tasks, re.M)
+            seq = [x.strip() for x in sq.group(1).split(",") if x.strip()] if sq else []
+            if not seq:
+                warnings.append("tasks.md: deploy_order is ordered but there is no 'sequence:' line")
+            elif registry:
+                unknown = [r for r in seq if r not in registry]
+                if unknown:
+                    warnings.append("tasks.md: sequence names repos that are not in config/repos.yaml: " + ", ".join(unknown))
+    plan = got("test-plan.md")
+    if plan is not None and ac_ids:
+        gaps = [a for a in ac_ids if not re.search(re.escape(a) + r"(?!\d)", plan)]
+        if gaps:
+            warnings.append("test-plan.md: no row for " + ", ".join(gaps))
+    ver = got("verify-report.md")
+    if ver is not None and not re.search(r"^Result:\s*\**\s*(PASS|FAIL)", ver, re.M | re.I):
+        warnings.append("verify-report.md: no 'Result: PASS' or 'Result: FAIL' line")
+    rev = got("review-report.md")
+    if rev is not None:
+        head = [l.strip() for l in rev.splitlines() if l.strip()][:4]
+        hm = next((re.fullmatch(r"human_required:\s*(true|false)", l) for l in head if l.startswith("human_required")), None)
+        if not hm:
+            warnings.append("review-report.md: the first lines must include 'human_required: true' or 'human_required: false'")
+        else:
+            decided = (manifest.get("review") or {}).get("human_required")
+            if isinstance(decided, bool) and decided != (hm.group(1) == "true"):
+                warnings.append(f"review.human_required in the manifest ({str(decided).lower()}) differs from review-report.md ({hm.group(1)})")
+        if not re.search(r"^Verdict:\s*(pass|rework|design_rejected)\b", rev, re.M | re.I):
+            warnings.append("review-report.md: no 'Verdict: pass|rework|design_rejected' line")
+
+
 def analyze(ticket, run=None):
     tdir = ROOT / "tickets" / ticket
     if not tdir.is_dir():
@@ -621,6 +684,7 @@ def analyze(ticket, run=None):
     for r in dev_repos:
         if registry and r not in registry:
             warnings.append(f"repo {r} is not in config/repos.yaml")
+    shape_warnings(run_dir, manifest, view, registry, warnings)
     tasks_hint = []
     tp = artifact_path(run_dir, "tasks.md")
     if tp is not None and registry and tp.is_file():
