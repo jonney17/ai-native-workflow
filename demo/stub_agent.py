@@ -255,32 +255,41 @@ def inspect_adapt():
 # ------------------------------------------------------------------ synthetic telemetry
 
 def write_telemetry():
+    """Synthetic telemetry in the same shape the real Copilot CLI file exporter writes (one JSON object per line)."""
     dump = os.environ.get("COPILOT_OTEL_FILE_EXPORTER_PATH")
     if not dump:
         return
     calls, tin, tout, tools = C.TOKENS.get((LANE, REPO, ATTEMPT), (3, 20000, 2500, 5))
-    session = uuid.uuid4().hex
+    conversation = str(uuid.uuid4())
     trace = uuid.uuid4().hex
-    resource = [{"key": k, "value": {"stringValue": v}} for k, v in ATTRS.items()]
-    resource.append({"key": "demo.synthetic", "value": {"boolValue": True}})
+    resource = {"attributes": {**ATTRS, "service.name": "github-copilot", "service.version": "demo", "demo.synthetic": True}}
 
-    def attr(k, v):
-        t = "intValue" if isinstance(v, int) and not isinstance(v, bool) else "stringValue"
-        return {"key": k, "value": {t: v}}
+    def span(name, attrs):
+        return {"type": "span", "traceId": trace, "spanId": uuid.uuid4().hex[:16], "name": name, "kind": 0,
+                "attributes": {"gen_ai.conversation.id": conversation, "demo.synthetic": True, **attrs},
+                "status": {"code": 0}, "events": [], "resource": resource}
 
-    spans = []
+    rows = []
     for i in range(calls):
-        spans.append({"traceId": trace, "spanId": uuid.uuid4().hex[:16], "name": "chat", "attributes": [
-            attr("session.id", session), attr("gen_ai.usage.input_tokens", tin // calls),
-            attr("gen_ai.usage.output_tokens", tout // calls), {"key": "demo.synthetic", "value": {"boolValue": True}}]})
+        rows.append(span("chat demo-model", {
+            "gen_ai.operation.name": "chat", "gen_ai.response.model": "demo-model",
+            "gen_ai.usage.input_tokens": tin // calls, "gen_ai.usage.output_tokens": tout // calls,
+            "gen_ai.usage.cache_read.input_tokens": (tin // calls) * 3 // 4 if i else 0,
+            "gen_ai.usage.cache_write.input_tokens": 0, "gen_ai.usage.reasoning.output_tokens": tout // calls // 2,
+            "github.copilot.cost": 1, "github.copilot.nano_aiu": 70000000 * (1 + i % 3)}))
     for i in range(tools):
-        name = TOOL_CALLS[i] if i < len(TOOL_CALLS) else "read_file"
-        spans.append({"traceId": trace, "spanId": uuid.uuid4().hex[:16], "name": "execute_tool", "attributes": [
-            attr("session.id", session), attr("gen_ai.tool.name", name)]})
+        rows.append(span("execute_tool " + (TOOL_CALLS[i] if i < len(TOOL_CALLS) else "read_file"),
+                         {"gen_ai.operation.name": "execute_tool",
+                          "gen_ai.tool.name": TOOL_CALLS[i] if i < len(TOOL_CALLS) else "read_file"}))
+    rows.append(span("invoke_agent", {"gen_ai.operation.name": "invoke_agent",
+                                      "gen_ai.usage.input_tokens": tin // calls * calls,
+                                      "gen_ai.usage.output_tokens": tout // calls * calls,
+                                      "github.copilot.cost": calls, "github.copilot.turn_count": calls}))
+    rows.append({"type": "metric", "name": "gen_ai.client.inference.usage.input_tokens", "demo.synthetic": True})
     Path(dump).parent.mkdir(parents=True, exist_ok=True)
     with open(dump, "a", encoding="utf-8", newline="\n") as f:
-        f.write(json.dumps({"resourceSpans": [{"resource": {"attributes": resource},
-                                               "scopeSpans": [{"spans": spans}]}]}) + "\n")
+        for r in rows:
+            f.write(json.dumps(r) + "\n")
 
 
 def main():
