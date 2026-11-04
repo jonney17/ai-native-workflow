@@ -2,9 +2,9 @@
 """Check the telemetry of one lane session and write a metrics summary.
 
 Reads the lane_started event written by wf_launch.py, opens that session's JSONL dump,
-and verifies that the workflow.* attributes and token usage are present. The summary is
-written to tickets/<ticket>/run-<n>/metrics/<lane>[-<repo>]-a<attempt>.json and
-Inspect & Adapt reads it. Missing or incomplete telemetry is recorded as such, so no
+and verifies that the workflow.* attributes, a session id and token usage are present.
+The summary is written to tickets/<ticket>/run-<n>/metrics/<lane>[-<repo>]-a<attempt>.json
+and Inspect & Adapt reads it. Missing or incomplete telemetry is recorded as such, so no
 conclusions are drawn from partial data.
 
 Exit code: 0 ok, 1 incomplete, 2 missing.
@@ -12,15 +12,24 @@ Exit code: 0 ok, 1 incomplete, 2 missing.
 Usage:
   python scripts/otel_check.py --ticket PROJ-123 --run 1 --lane dev --repo repo-a [--attempt 1]
 
-Field names are matched tolerantly (dots and underscores are treated alike) because the
-exact JSONL layout depends on the Copilot version. Confirm them once against a real dump.
+Format (confirmed on a real Copilot CLI 1.0.x dump): one JSON object per line, either
+  {"type": "span",   "name", "attributes": {...}, "resource": {"attributes": {...}}, ...}
+  {"type": "metric", ...}                       (cumulative; ignored here to avoid double counting)
+Spans of interest: "chat <model>" (one per model call, carries tokens, cost and nano_aiu),
+"execute_tool <tool>" (one per tool call) and "invoke_agent" (a total of the whole session).
+The workflow.* tags are resource attributes. The session id is gen_ai.conversation.id.
+Tokens are summed over the chat spans only: the invoke_agent span repeats the same totals,
+and input_tokens already includes the cache read and write tokens (they are subsets).
+OTLP JSON ({"resourceSpans": ...}) is also understood.
 """
 import argparse
 import json
 import sys
+from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+SESSION_KEYS = ("session.id", "gen_ai.conversation.id")
 
 
 def norm(key):
@@ -35,24 +44,45 @@ def unwrap(v):
     return v
 
 
-def collect(node, out):
-    """Flatten any JSON into (key, value) pairs, handling OTLP-style attribute lists."""
-    if isinstance(node, dict):
-        if isinstance(node.get("key"), str) and "value" in node:
-            out.append((node["key"], unwrap(node["value"])))
-        for k, v in node.items():
-            if isinstance(v, (dict, list)):
-                collect(v, out)
-            else:
-                out.append((k, v))
-    elif isinstance(node, list):
-        for x in node:
-            collect(x, out)
+def attrs_of(x):
+    """Attributes as a plain dict. Accepts {'k': v} or the OTLP list [{'key': k, 'value': {...}}]."""
+    if isinstance(x, dict):
+        return {k: unwrap(v) for k, v in x.items()}
+    if isinstance(x, list):
+        return {a["key"]: unwrap(a.get("value")) for a in x if isinstance(a, dict) and "key" in a}
+    return {}
 
 
-def number(v):
+def read_dump(path):
+    spans, metrics, lines, bad = [], 0, 0, 0
+    for raw in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if not raw.strip():
+            continue
+        lines += 1
+        try:
+            obj = json.loads(raw)
+        except json.JSONDecodeError:
+            bad += 1
+            continue
+        if not isinstance(obj, dict):
+            continue
+        if obj.get("type") == "metric":
+            metrics += 1
+        elif "resourceSpans" in obj:
+            for rs in obj.get("resourceSpans") or []:
+                res = attrs_of((rs.get("resource") or {}).get("attributes"))
+                for ss in rs.get("scopeSpans") or []:
+                    for sp in ss.get("spans") or []:
+                        spans.append({"name": str(sp.get("name", "")), "attrs": attrs_of(sp.get("attributes")), "resource": res})
+        elif obj.get("type") == "span" or "spanId" in obj or "traceId" in obj:
+            spans.append({"name": str(obj.get("name", "")), "attrs": attrs_of(obj.get("attributes")),
+                          "resource": attrs_of((obj.get("resource") or {}).get("attributes"))})
+    return spans, metrics, lines, bad
+
+
+def num(d, key):
     try:
-        return float(v)
+        return float(d.get(key) or 0)
     except (TypeError, ValueError):
         return 0.0
 
@@ -112,6 +142,8 @@ def main():
         result.update(otel_status="missing", problems=[f"no telemetry in {launch['dump']}"])
         return finish(run_dir, result, args)
 
+    spans, metrics, lines, bad = read_dump(dump)
+
     expected = {
         "workflow_ticket": args.ticket,
         "workflow_kind": kind,
@@ -122,61 +154,53 @@ def main():
     }
     if launch.get("repo"):
         expected["workflow_repo"] = launch["repo"]
-
-    seen = set()
-    lines = bad = spans = tool_calls = 0
-    tokens_in = tokens_out = 0.0
-    has_session_id = False
-    credit_keys = set()
-    span_like, all_lines = [], []
-
-    for raw in dump.read_text(encoding="utf-8", errors="replace").splitlines():
-        if not raw.strip():
-            continue
-        lines += 1
-        try:
-            obj = json.loads(raw)
-        except json.JSONDecodeError:
-            bad += 1
-            continue
-        pairs = []
-        collect(obj, pairs)
-        for k, v in pairs:
+    seen, sessions, credit_keys, models = set(), set(), set(), set()
+    for sp in spans:
+        merged = {norm(k): v for k, v in {**sp["resource"], **sp["attrs"]}.items()}
+        for k, want in expected.items():
+            if str(merged.get(k)) == want:
+                seen.add(k)
+        for k in SESSION_KEYS:
+            if sp["attrs"].get(k):
+                sessions.add(str(sp["attrs"][k]))
+        for k in sp["attrs"]:
             nk = norm(k)
-            if nk in expected and str(v) == expected[nk]:
-                seen.add(nk)
-            if nk == "session_id":
-                has_session_id = True
-            if "credit" in nk:
-                credit_keys.add(nk)
-        keys = {norm(k) for k, _ in pairs}
-        (span_like if keys & {"spanid", "span_id", "traceid", "trace_id"} else all_lines).append(pairs)
+            if "credit" in nk or "aiu" in nk or nk.endswith("_cost"):
+                credit_keys.add(k)
+        m = sp["attrs"].get("gen_ai.response.model") or sp["attrs"].get("gen_ai.request.model")
+        if m:
+            models.add(str(m))
 
-    # Count usage from span records when the dump has them (avoids double counting metrics).
-    records = span_like if span_like else all_lines
-    spans = len(span_like)
-    for pairs in records:
-        for k, v in pairs:
-            nk = norm(k)
-            if nk.startswith("gen_ai_usage_") and nk.endswith("input_tokens"):
-                tokens_in += number(v)
-            elif nk.startswith("gen_ai_usage_") and nk.endswith("output_tokens"):
-                tokens_out += number(v)
-            elif nk == "gen_ai_tool_name":
-                tool_calls += 1
+    chat = [s for s in spans if s["attrs"].get("gen_ai.operation.name") == "chat" or s["name"].startswith("chat")]
+    if not chat:  # fall back to the session total
+        chat = [s for s in spans if s["name"] == "invoke_agent"]
+    tools = Counter(str(s["attrs"].get("gen_ai.tool.name") or s["name"]) for s in spans
+                    if s["name"].startswith("execute_tool") or s["attrs"].get("gen_ai.tool.name"))
+
+    def total(key):
+        return sum(num(s["attrs"], key) for s in chat)
+
+    tokens_in, tokens_out = total("gen_ai.usage.input_tokens"), total("gen_ai.usage.output_tokens")
+    nano = total("github.copilot.nano_aiu")
 
     problems = [f"attribute not found: {k}" for k in sorted(expected) if k not in seen]
     if tokens_in + tokens_out == 0:
         problems.append("no gen_ai.usage.* token counts found")
-    if not has_session_id:
-        problems.append("session.id not found (needed to join VS Code sessions)")
+    if not sessions:
+        problems.append("no session id found (looked for " + ", ".join(SESSION_KEYS) + ")")
 
     result.update(
         otel_status="ok" if not problems else "incomplete",
         problems=problems,
         dump=launch["dump"],
-        lines=lines, unparsable_lines=bad, spans=spans, tool_calls=tool_calls,
+        lines=lines, unparsable_lines=bad, spans=len(spans), metric_records=metrics,
+        chat_calls=len(chat), tool_calls=sum(tools.values()), tools=dict(sorted(tools.items())),
         tokens_in=int(tokens_in), tokens_out=int(tokens_out),
+        tokens_cache_read=int(total("gen_ai.usage.cache_read.input_tokens")),
+        tokens_cache_write=int(total("gen_ai.usage.cache_write.input_tokens")),
+        tokens_reasoning=int(total("gen_ai.usage.reasoning.output_tokens")),
+        copilot_cost=total("github.copilot.cost"), nano_aiu=int(nano), aiu=round(nano / 1e9, 4),
+        models=sorted(models), conversation_ids=sorted(sessions),
         credit_attributes_found=sorted(credit_keys),
     )
     return finish(run_dir, result, args)
@@ -192,7 +216,10 @@ def finish(run_dir, result, args):
         print(f"  - {p}")
     if result["otel_status"] != "missing" and "tokens_in" in result:
         print(f"  tokens in/out: {result['tokens_in']}/{result['tokens_out']}, tool calls: {result['tool_calls']}, spans: {result['spans']}")
-        print(f"  credit attributes: {', '.join(result['credit_attributes_found']) or 'none found'}")
+        print(f"  cache read/write: {result['tokens_cache_read']}/{result['tokens_cache_write']}, reasoning: {result['tokens_reasoning']}, "
+              f"model calls: {result['chat_calls']}")
+        print(f"  copilot cost: {result['copilot_cost']:g}, nano_aiu: {result['nano_aiu']} (= {result['aiu']} AIU)")
+        print(f"  credit-like attributes: {', '.join(result['credit_attributes_found']) or 'none found'}")
     print(f"wrote {out.relative_to(ROOT).as_posix()}")
     sys.exit({"ok": 0, "incomplete": 1, "missing": 2}[result["otel_status"]])
 
