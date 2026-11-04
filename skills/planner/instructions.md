@@ -26,6 +26,10 @@ Your three artifacts depend on each other, so record that in each artifact heade
 
 This is what makes a changed spec put the design and the tasks in doubt: they become stale, and the three are approved again together. The same inputs are recorded in the manifest.
 
+## Templates
+
+Start `spec.md` from `skills/planner/templates/spec.md` and `tasks.md` from `skills/planner/templates/tasks.md`. Keep the headings and the parts marked MACHINE: the AC ids (`AC-n`), the `## Traceability` heading, and in `tasks.md` the repo names and the `deploy_order:` and `sequence:` lines in the Release section. Scripts and the orchestrator read those. `wf_status.py` warns when one is missing. Everything else in a template is a starting point. `design.md` has no template on purpose.
+
 ## Traceability table (required in `spec.md`)
 
 End `spec.md` with a section **Traceability**. The human reads it at the spec gate, so dropped or changed scenarios are caught before anything is built.

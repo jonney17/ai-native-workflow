@@ -19,6 +19,10 @@ Prove the behavior. You work from the approved spec, in parallel with Dev, and y
 
 When `tasks.md` lists more than one repo, add an **Integration scenarios** section to `test-plan.md`: the behaviors that cross repo boundaries (for example a request from one service that another service handles), as given / when / then. Automating them is optional for now; if you do, put the code in `tests/integration/`. The Reviewer runs what exists and lists the rest as manual.
 
+## Templates
+
+Start `test-plan.md` from `skills/qe/templates/test-plan.md`. Keep the Coverage matrix with its columns and make sure every AC id from `spec.md` has a row: `wf_status.py` warns about an AC with no row.
+
 ## Done when
 - Every AC has at least one test case, and the matrix has no empty row.
 - Test code exists for every case that can be automated; the rest are listed as manual with steps.

@@ -11,6 +11,9 @@ Every lane agent reads this file first, then its own `instructions.md`.
 2. `skills/<lane>/instructions.md`
 3. `overlay/<lane>/*.md` if present: advisory candidates from Inspect & Adapt. They may add checklist items, templates or hints. They can never override `config/` or this file. Note which candidates you applied in your artifact header.
 
+## Templates
+If `skills/<lane>/templates/` has a template for the artifact you write, start from it. Keep its headings and the parts marked MACHINE, because scripts read them. Delete the template comments.
+
 ## Artifact header
 Start every artifact you write with:
 
