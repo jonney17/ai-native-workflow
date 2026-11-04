@@ -41,13 +41,22 @@ A real question with a decision behind it, small enough for a few hours of agent
 - `otel_status` in the metrics file: `ok`, `incomplete` or `missing`. Read `problems` for what was not found.
 - Do the `workflow.*` tags come through? If the tags are missing, `OTEL_RESOURCE_ATTRIBUTES` is not being used by the CLI.
 - Are token counts present and plausible? Are there any credit-like attributes (`credit_attributes_found`)?
-- Keep one real dump file and note the actual field names. The check matches names loosely, so adjust it once you know them.
+- Keep one real dump file and note the actual field names. The check was corrected against the first real dump (see below).
 
 **Workflow.**
 - Did the agent follow the lane instructions and produce `findings.md` in the right format? Did it stay out of the manifest?
 - Was `wf_status` correct and useful at each step? Did its next-step hints match what you needed to do?
 - How many manual steps were there, and which ones were tedious? This decides what to automate first.
 - How long did it take compared with doing it without the workflow, and was the result as good?
+
+## What the first real dump showed (Copilot CLI 1.0.x, file exporter)
+
+- One JSON object per line: `span` lines and cumulative `metric` lines. The `workflow.*` tags are in `resource.attributes`, so tagging through `OTEL_RESOURCE_ATTRIBUTES` works.
+- There is no `session.id`. The session id is `gen_ai.conversation.id`, on every span.
+- Spans: `chat <model>` (one per model call), `execute_tool <tool>` (one per tool call), `permission`, and one `invoke_agent` that repeats the session totals. Summing every span double counts: the check now sums the `chat` spans only.
+- `gen_ai.usage.input_tokens` already includes the cache read and write tokens, which are reported separately.
+- Cost is present: `github.copilot.cost` and `github.copilot.nano_aiu` on each chat span and on `invoke_agent`. `nano_aiu / 1e9` gives AI units. How that maps to billing is not confirmed yet.
+- Launching and quitting the CLI without a prompt writes a tiny dump (one notification span). Only the latest launch for a lane and attempt is checked.
 
 ## Pilot log (copy into a file and fill in)
 

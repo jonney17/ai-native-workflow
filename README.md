@@ -91,4 +91,4 @@ Confirmed: lanes and names, artifact-driven readiness, derived ticket status, ov
 
 Not built yet: the write side of the orchestrator (leases, applying proposed events, updating the manifest, the `next-tasks` queue). Today the manifest is edited by hand, and `wf_status.py` shows what to edit.
 
-Open: acceptance policy (suggested default in `manifest.yaml`), whether the raw OTEL JSONL field names match `otel_check.py` (confirm with one real dump), whether per-request credits appear in the telemetry.
+Open: acceptance policy (suggested default in `manifest.yaml`). Confirmed on one real Copilot CLI dump: the `workflow.*` tags arrive as resource attributes, the session id is `gen_ai.conversation.id`, and per-call `github.copilot.cost` and `github.copilot.nano_aiu` are present. Still to confirm: how `nano_aiu` maps to billing, and VS Code and IntelliJ sessions.

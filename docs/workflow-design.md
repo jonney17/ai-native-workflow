@@ -243,7 +243,7 @@ docs/        this document
 **Built so far** (in the repository)
 
 - Config, lane instructions, ticket and ledger templates for all three kinds.
-- Scripts to create a work item, launch a lane session with telemetry tags (starting in the right repo folder), and check the telemetry. Tested on synthetic data.
+- Scripts to create a work item, launch a lane session with telemetry tags (starting in the right repo folder), and check the telemetry. Tested on one real Copilot CLI dump and on synthetic data in the demo.
 - A repo registry with per-developer local paths, and a declared release order per ticket.
 - Templates for the artifacts that scripts or gates read by structure (`spec.md`, `tasks.md`, `test-plan.md`, `verify-report.md`, `review-report.md`), under `skills/<lane>/templates/`. Each marks the machine-read parts; `design.md` has none on purpose.
 - A read-only status script (`wf_status.py`): from a ticket's manifest and the lane contracts it derives artifact staleness, lane states, the ticket status, and the next actions. It also warns when a machine-read part of an artifact is missing, for example `deploy_order` in `tasks.md` or `human_required` in `review-report.md`. It is the first slice of the orchestrator and is useful for a live demo, since it shows what is ready, what is stale and who has to act.
@@ -260,7 +260,7 @@ docs/        this document
 | Item | Note |
 |---|---|
 | Acceptance policy | Suggested default to try: a ticket is accepted by evidence (deployed and healthy, every AC covered by a passing test, no blocking comments), with a human sign-off when risk-flagged or user-visible. The PO accepts at the requirement level when all its tickets are done. Not decided. |
-| OTEL field names | The check script matches tolerantly; confirm against one real dump. It is also unknown whether per-request credits appear in the telemetry. |
+| OTEL field names and credits | Confirmed on one real Copilot CLI dump (see the telemetry notes in `docs/pilot-spike.md`): tags, session id, tokens, `github.copilot.cost` and `github.copilot.nano_aiu` are all present. Still open: how `nano_aiu` maps to billing, and what VS Code and IntelliJ export. |
 | Real budgets | Set from the first few tickets' metrics. |
 | Hotfix kind | Not supported yet. |
 | Risk thresholds | Starting values (for example a 400-line diff) to be tuned at the retro. |
