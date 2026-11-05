@@ -96,6 +96,11 @@ def agent_command(runner, run, lane, repo, attempt):
                         "overlay_applied in your artifact header):\n" + "\n".join(parts))
     else:
         overlay_line = "\n  overlay candidates to apply: none"
+    answers = [e["detail"].get("text", "") for e in run.events()
+               if e["event"] == "question_answered" and e["detail"].get("lane") == lane
+               and (not repo or e["detail"].get("repo") in ("", None, repo)) and e["detail"].get("text")]
+    if answers:
+        overlay_line += "\n  answers from a person to your earlier question(s), oldest first:\n" + "\n".join("  - " + a for a in answers)
     fmt = {"overlay_line": overlay_line, "lane": lane, "repo": repo, "ticket": run.ticket, "run": run.run, "attempt": attempt,
            "root": str(ROOT), "run_dir": str(run.dir), "repo_phrase": f" for repo {repo}" if repo else "",
            "repo_line": (f"\n  repo: {repo}, at {repo_path}. Your working directory is the workflow root; work in the repo by "
@@ -508,8 +513,8 @@ def main():
     elif args.command == "answer":
         if not args.lane:
             sys.exit("error: --lane is required")
-        run.set_lane(args.lane, "waiting")
-        run.event(args.by, "question_answered", {"lane": args.lane, "text": args.text})
+        run.set_lane(args.lane, "waiting", args.repo or None)
+        run.event(args.by, "question_answered", {"lane": args.lane, "repo": args.repo, "text": args.text})
         run.decide(f"{args.by} answered the {args.lane} question: {args.text or '(see events.log)'}")
         print(f"{args.lane} unblocked")
     elif args.command == "retry":
