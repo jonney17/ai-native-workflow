@@ -85,7 +85,7 @@ RANK = {"idle": 0, "waiting": 1, "starting": 2, "working": 3, "waiting for you":
 
 def board():
     """Each lane across all tickets and one-off tasks: an overall status and the lines behind it."""
-    lanes = {l: {"title": TITLES[l], "status": "idle", "lines": [], "ask_for": "", "questions": [], "live": None} for l in LANES}
+    lanes = {l: {"title": TITLES[l], "status": "idle", "lines": [], "ask_for": "", "questions": [], "gates": [], "live": None} for l in LANES}
     cfg = S.load_yaml(ROOT / "config" / "lanes.yaml")
     for l in LANES:
         lanes[l]["ask_for"] = str(((cfg.get("lanes") or {}).get(l) or {}).get("ask_for", ""))
@@ -123,10 +123,13 @@ def board():
         g = res.get("gates") or {}
         if (g.get("planner") or {}).get("state") == "awaiting_approval":
             add("planner", "waiting for you", f"{t}: approve the plan", ticket=t)
+            lanes["planner"]["gates"].append({"ticket": t, "gate": "planner", "cmd": "approve", "label": "plan"})
         if (g.get("reviewer") or {}).get("state") == "awaiting_approval":
             add("reviewer", "waiting for you", f"{t}: approve the review", ticket=t)
+            lanes["reviewer"]["gates"].append({"ticket": t, "gate": "reviewer", "cmd": "approve", "label": "review"})
         if res["status"] == "Awaiting acceptance":
             add("inspect-adapt", "waiting for you", f"{t}: accept the ticket", ticket=t)
+            lanes["inspect-adapt"]["gates"].append({"ticket": t, "gate": "", "cmd": "accept", "label": "ticket"})
     items = []
     for b in backlog():
         s = summaries.get(b["id"])

@@ -19,7 +19,8 @@ function buildRows() {
       <div class="live" hidden><div class="livehead"></div><pre></pre></div>
       <div class="chat"></div>
       <div class="q" hidden></div>
-      <form class="send" data-lane="${l}"><input type="text" autocomplete="off"><button class="p">Send</button><button type="button" class="clear" title="Start a new conversation with this lane">Clear</button></form>
+      <div class="gates" hidden></div>
+      <form class="send" data-lane="${l}"><input type="text" id="in-${l}" autocomplete="off"><button class="p">Send</button><button type="button" class="clear" title="Start a new conversation with this lane">Clear</button></form>
     </div></div>`).join('');
   for (const l of LANES) {
     const f = document.querySelector(`#row-${l} form`);
@@ -54,11 +55,17 @@ function paintBoard() {
       const pre = live.querySelector('pre'), atEnd = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 20;
       pre.textContent = d.live.text; if (atEnd) pre.scrollTop = pre.scrollHeight;
     } else live.hidden = true;
+    const ge = row.querySelector('.gates');
+    ge.hidden = !d.gates.length;
+    ge.innerHTML = d.gates.map((g) => `<div class="row2"><b>${esc(g.ticket)}</b> waits for your ${esc(g.label)} decision
+      <a data-open="${esc(g.ticket)}">review files</a>
+      <button class="p" data-cmd="${g.cmd}" data-ticket="${esc(g.ticket)}" data-lane="${l}" data-gate="${esc(g.gate)}">${g.cmd === 'accept' ? 'Accept' : 'Approve'}</button>
+      ${g.cmd === 'approve' ? `<button class="d" data-cmd="reject" data-ticket="${esc(g.ticket)}" data-gate="${esc(g.gate)}" data-text="in-${l}" title="type the reason in the box first">Reject</button>` : ''}</div>`).join('');
     const q = d.questions[0], qe = row.querySelector('.q'), input = row.querySelector('input');
     mode[l] = q ? { ticket: q.ticket, repo: q.repo } : null;
     qe.hidden = !q;
     if (q) qe.innerHTML = `<b>${esc(q.ticket)}${q.repo ? ' · ' + esc(q.repo) : ''} asks:</b> ${esc(q.question || '(see its last log)')}` + (d.questions.length > 1 ? ` <span class="mut">(+${d.questions.length - 1} more)</span>` : '');
-    input.placeholder = q ? 'Your answer goes to this lane and it continues' : `Chat with ${d.title}. It needs: ${d.ask_for}`;
+    input.placeholder = q ? 'Your answer goes to this lane and it continues' : d.gates.length ? 'To reject, type the reason here and press Reject. Or chat with the lane.' : `Chat with ${d.title}. It needs: ${d.ask_for}`;
   }
   $('tickets').innerHTML = board.tickets.map((t) => `<tr><td><b>${esc(t.id)}</b></td><td>${esc(t.title)}<br><span class="mut">${esc(t.repos.join(', '))}</span></td>
     <td>${esc(t.state)}<br><span class="mut">${esc(t.detail)}</span></td>
@@ -117,7 +124,8 @@ document.addEventListener('click', async (e) => {
   else if (d.stop) say((await api('/api/stop', { ticket: d.stop })).message);
   else if (d.cmd) {
     const text = d.text ? $(d.text).value : '';
-    say((await api('/api/action', { ticket: cur, cmd: d.cmd, lane: d.lane, repo: d.repo, gate: d.gate, text })).message);
+    say((await api('/api/action', { ticket: d.ticket || cur, cmd: d.cmd, lane: d.cmd === 'answer' || d.cmd === 'retry' ? d.lane : '', repo: d.repo, gate: d.gate, text })).message);
+    if (d.text) $(d.text).value = '';
     loadBoard(); loadDetail(true);
   } else if (d.file) { const v = $('view'); v.hidden = false; v.textContent = await api('/api/file?ticket=' + cur + '&path=' + encodeURIComponent(d.file)); }
 });
