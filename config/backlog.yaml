@@ -1,0 +1,47 @@
+# FAKE ticket list for building the workflow. Later this comes from the Jira board (tickets assigned to the team).
+# The UI shows these; starting one creates the ticket run and hands it to the lanes.
+tickets:
+  - id: SHOP-101
+    title: Show the tracking number on the order page
+    prd: PRD-7#R2
+    assignee: team
+    repos: [shop-api, shop-web]
+    description: Customers ask support where their parcel is. Show the carrier tracking number on the order page.
+    criteria:
+      - The order API returns a tracking number once an order has shipped.
+      - The order page shows the tracking number for shipped orders.
+  - id: SHOP-102
+    title: Add a free-shipping banner to the cart
+    prd: PRD-7#R4
+    assignee: team
+    repos: [shop-web]
+    description: Tell customers how much more they need to spend to get free shipping.
+    criteria:
+      - The cart shows the amount left to reach the free-shipping threshold.
+      - The banner disappears once the threshold is reached.
+  - id: SHOP-103
+    title: Rate-limit the order search API
+    prd: PRD-9#R1
+    assignee: team
+    repos: [shop-api]
+    description: Protect the order search endpoint from bursts of requests.
+    criteria:
+      - More than 60 requests per minute from one client get HTTP 429.
+      - The response carries a Retry-After header.
+  - id: SHOP-104
+    title: Export order history as CSV
+    prd: PRD-7#R6
+    assignee: team
+    repos: [shop-api, shop-web]
+    description: Let customers download their order history.
+    criteria:
+      - The account page has an Export CSV button.
+      - The CSV has one row per order with date, number and total.
+  - id: SHOP-105
+    title: Upgrade the web app to the new UI library
+    prd: ""
+    assignee: team
+    repos: [shop-web]
+    description: Tech debt. Upgrade the UI library; behavior must not change.
+    criteria:
+      - All existing pages render as before.

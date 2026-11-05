@@ -37,6 +37,12 @@ prompt: |
   ticket: {ticket}, run: {run}, attempt: {attempt}{repo_line}{extra_line}
   Follow your agent instructions. They say what to read and what to write.
 
+adhoc_prompt: |
+  This is an ad-hoc request from a person, not a ticket run.
+  root: {root}
+  task_dir: {task_dir}
+  Read skills/_common.md (section "Ad-hoc request") and your agent file, then handle the request in task_dir.
+
 deploy:
   # CI/CD stand-in, run once per repo in the Release order after the review passes.
   # Placeholders: {repo} {ticket} {run} {root}. null = a placeholder that only prints. The team plugs in the real command.

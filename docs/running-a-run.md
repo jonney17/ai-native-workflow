@@ -21,15 +21,17 @@ python scripts/wf_run.py start --ticket PROJ-1 --verbose       # the one trigger
 
 It ends when the ticket is Done or Escalated. Agent output is saved in `logs/` of the run folder.
 
-## A simple UI
+## The UI: the team as lanes
 
 ```
-python scripts/wf_ui.py          # opens http://127.0.0.1:8765 (this computer only, no extra packages)
+python scripts/wf_ui.py          # opens http://127.0.0.1:8765 (this computer only)
 ```
 
-Pick a ticket, press **Start workers**, and watch each lane. For every lane you can read its last agent log and its
-artifacts, answer its question (the answer goes into the lane's next task message), retry it after it gave up, and
-approve or reject at the gates. It runs the same commands as below; use either.
+- **Team board:** one card per lane (Planner, Dev, QE, Reviewer, Inspect & Adapt) with its status: `idle`, `waiting`, `working`, `waiting for you`, `blocked`, `failed`, and what it is doing on which ticket.
+- **Tickets:** the list comes from `config/backlog.yaml` (fake for now; later the Jira board). **Start** creates the ticket run, fills the ticket context and starts the workers, so the lanes process it one after the other. Click a ticket to see its lanes, read artifacts and logs, answer questions, approve or reject at the gates, retry a lane that gave up, and accept the ticket.
+- **Ask a lane:** the **Ask** button on any lane gives it one task outside a ticket. The form says what the lane needs from you (`ask_for` in `config/lanes.yaml`). If something is missing the lane writes a question; it shows on the page, you answer, and the lane runs again. The result appears on the page. Requests live in `tasks/` (git-ignored).
+
+It runs the same commands as below; use either. A lane cannot chat mid-session (Copilot runs with `--no-ask-user`): it asks, stops, and starts again with your answer.
 
 ## What people do
 

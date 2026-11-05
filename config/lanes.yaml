@@ -8,6 +8,7 @@ statuses: [missing, draft, ready, approved, rejected, stale]
 lanes:
   planner:
     purpose: Explore the ticket and/or PRD, then define the work (spec, design, tasks).
+    ask_for: the ticket or topic (text or link), its PRD refs, and which repos it may touch   # what a person must give this lane for a one-off request
     requires: [ticket-context.md]
     produces: [spec.md, design.md, tasks.md]
     gate:
@@ -16,11 +17,13 @@ lanes:
 
   qe:
     purpose: Prove the behavior.
+    ask_for: the spec or acceptance criteria to test, and the repo   # what a person must give this lane for a one-off request
     requires: [spec.md@approved, tasks.md@approved]
     produces: [test-plan.md, tests/]
 
   dev:
     purpose: Build the change, one task per repo.
+    ask_for: the repo, the task, and the spec or acceptance criteria to build against   # what a person must give this lane for a one-off request
     fan_out: repo              # one instance per repo listed in tasks.md
     requires: [spec.md@approved, design.md@approved, tasks.md@approved]
     produces: ["changes/<repo>/"]
@@ -28,6 +31,7 @@ lanes:
 
   reviewer:
     purpose: Verify, then review.
+    ask_for: what to review (repo and branch or diff) and the criteria to review against   # what a person must give this lane for a one-off request
     requires: ["changes/*", test-plan.md]
     produces: [verify-report.md, review-report.md]
     independent_of: [dev, qe]
@@ -38,6 +42,7 @@ lanes:
 
   inspect-adapt:
     purpose: Look back at the finished ticket and report what worked and what did not.
+    ask_for: which ticket or period to look back at   # what a person must give this lane for a one-off request
     trigger: ticket_accepted   # acceptance policy is TBD, see acceptance block in the manifest
     requires: [events.log, "all artifacts"]
     produces: [inspection-report.md]

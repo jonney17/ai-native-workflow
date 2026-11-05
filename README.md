@@ -36,7 +36,7 @@ python scripts/wf_run.py start --ticket PROJ-1 --verbose
 python scripts/wf_status.py PROJ-1                      # where it stands and what a person must do next
 ```
 
-The workers stop at human gates and print the command to continue. Or use the small web UI: `python scripts/wf_ui.py`. Details: [docs/running-a-run.md](docs/running-a-run.md).
+The workers stop at human gates and print the command to continue. Or use the web UI, which shows the team as lanes, a ticket list and one-off requests: `python scripts/wf_ui.py`. Details: [docs/running-a-run.md](docs/running-a-run.md).
 Design: [docs/workflow-design.md](docs/workflow-design.md). Demo: [demo/README.md](demo/README.md).
 
 ## Layout
@@ -44,9 +44,9 @@ Design: [docs/workflow-design.md](docs/workflow-design.md). Demo: [demo/README.m
 ```
 .github/agents/  wf-<lane>.agent.md: each lane's instructions (edit these)
 skills/          _common.md (rules every lane reads) and templates/ per lane
-config/          lanes.yaml (who needs/produces what), risk-rules.yaml, budgets.yaml, runner.yaml, repos.yaml
+config/          lanes.yaml (who needs/produces what), backlog.yaml (fake ticket list), risk-rules.yaml, budgets.yaml, runner.yaml, repos.yaml
 tickets/         tickets/<TICKET>/run-<N>/ : manifest.yaml, events.log, decisions.md, artifacts/
-scripts/         new_ticket.py, wf_status.py (read-only view), wf_run.py (workers + human commands), wf_ui.py (local web UI), wf_state.py, wf_launch.py
+scripts/         new_ticket.py, wf_status.py (read-only view), wf_run.py (workers + human commands), wf_ui.py (local web UI), wf_task.py (one-off lane requests), wf_state.py, wf_launch.py
 demo/            demo.py and stub_agent.py
 ```
 
