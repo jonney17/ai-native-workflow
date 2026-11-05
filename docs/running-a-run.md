@@ -24,14 +24,16 @@ It ends when the ticket is Done or Escalated. Agent output is saved in `logs/` o
 ## The UI: the team as lanes
 
 ```
-python scripts/wf_ui.py          # opens http://127.0.0.1:8765 (this computer only)
+node ui/server.js          # opens http://127.0.0.1:8765 (this computer only). Needs Node 18+ and nothing else.
 ```
 
-- **Team board:** one card per lane (Planner, Dev, QE, Reviewer, Inspect & Adapt) with its status: `idle`, `waiting`, `working`, `waiting for you`, `blocked`, `failed`, and what it is doing on which ticket.
-- **Tickets:** the list comes from `config/backlog.yaml` (fake for now; later the Jira board). **Start** creates the ticket run, fills the ticket context and starts the workers, so the lanes process it one after the other. Click a ticket to see its lanes, read artifacts and logs, answer questions, approve or reject at the gates, retry a lane that gave up, and accept the ticket.
-- **Ask a lane:** the **Ask** button on any lane gives it one task outside a ticket. The form says what the lane needs from you (`ask_for` in `config/lanes.yaml`). If something is missing the lane writes a question; it shows on the page, you answer, and the lane runs again. The result appears on the page. Requests live in `tasks/` (git-ignored).
+The UI is JavaScript (`ui/server.js`, `ui/index.html`, `ui/app.js`). It asks `scripts/wf_api.py` for JSON and starts the Python workers.
 
-It runs the same commands as below; use either.
+- **One row per lane** (Planner, Dev, QE, Reviewer, Inspect & Adapt): its status (`idle`, `waiting`, `working`, `waiting for you`, `blocked`, `failed`), what it is doing on which ticket, a **live log** while it works on a ticket, and a **chat box**.
+- **The chat box** does two things. When the lane has asked a ticket question, it shows the question and your text is the answer (the lane continues in the same session). Otherwise it is a chat with that lane outside any ticket: a long-lived session per lane (`scripts/wf_chat.py`); say what you want, and if the lane lacks something it asks. **Clear** starts a new conversation. Files a chat produces go to `tasks/chat-<lane>/` (git-ignored).
+- **Tickets:** the list comes from `config/backlog.yaml` (fake for now; later the Jira board). **Start** creates the ticket run, fills its context and starts the workers, so the lanes process it one after the other. **Open** shows gates (approve, reject), files, last logs, retry and accept.
+
+It runs the same commands as below; use either. Set `WF_PYTHON` if your Python command is not `python3` or `python`.
 
 ## What people do
 

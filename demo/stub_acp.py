@@ -31,10 +31,14 @@ for line in sys.stdin:
         reply(m["id"], {"sessionId": "stub-session"})
     elif m["method"] == "session/prompt":
         prompts += 1
+        said = " ".join(b.get("text", "") for b in (m["params"].get("prompt") or []))
         time.sleep(float(os.environ.get("DEMO_PACE", "1")))
-        if os.environ.get("DEMO_ASK") == A.LANE and prompts == 1:
+        if A.TASK_DIR:     # chat with a person outside a ticket
+            time.sleep(0.3)
+            chunk("stub-session", f"[stub {A.LANE}] I got: " + said.split("The person says:")[-1].strip()[:200])
+        elif os.environ.get("DEMO_ASK") == A.LANE and prompts == 1:
             chunk("stub-session", "Which environment should I target?")
         else:
-            (A.adhoc if A.TASK_DIR else {"planner": A.planner, "qe": A.qe, "dev": A.dev, "reviewer": A.reviewer, "inspect-adapt": A.inspect_adapt}[A.LANE])()
+            ({"planner": A.planner, "qe": A.qe, "dev": A.dev, "reviewer": A.reviewer, "inspect-adapt": A.inspect_adapt}[A.LANE])()
             chunk("stub-session", "Done.")
         reply(m["id"], {"stopReason": "end_turn"})

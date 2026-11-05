@@ -1,0 +1,29 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Team workflow</title><style>
+:root{--bg:#fafaf8;--fg:#1d1d1b;--mut:#6b6b66;--card:#fff;--line:#dcdcd4;--acc:#1f5fbf;--ok:#1b7f3b;--warn:#b26a00;--bad:#b3261e;--you:#e8f0fc}
+@media(prefers-color-scheme:dark){:root{--bg:#161616;--fg:#ececea;--mut:#9a9a94;--card:#202020;--line:#383836;--acc:#6ea8ff;--ok:#5fcf80;--warn:#f0b050;--bad:#ff8a80;--you:#1f2a3d}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:16px}h1{font-size:18px;margin:0}h2{font-size:15px;margin:18px 0 8px}
+select,button,textarea,input{font:inherit;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:6px 10px}
+button{cursor:pointer}button.p{background:var(--acc);color:#fff;border-color:var(--acc)}button.d{color:var(--bad)}button:disabled{opacity:.5;cursor:default}
+.lane{display:grid;grid-template-columns:210px 1fr;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:8px}
+.who{min-width:0}.pill{display:inline-block;border-radius:10px;padding:1px 9px;font-size:12px;font-weight:600;border:1px solid currentColor;margin-left:6px}
+.idle{color:var(--mut)}.waiting,.starting{color:var(--warn)}.working,.done,.ready,.approved{color:var(--ok)}.blocked,.failed,.rejected{color:var(--bad)}.wfy{color:var(--acc)}
+.lines div{font-size:13px;margin-top:4px;color:var(--mut);overflow-wrap:anywhere}.lines a{color:var(--acc);cursor:pointer}
+.work{min-width:0}.live{margin-bottom:6px}.livehead{font-size:12px;color:var(--mut)}
+pre{white-space:pre-wrap;word-break:break-word;max-height:150px;overflow:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px;font-size:12px;margin:2px 0}
+.chat{max-height:210px;overflow:auto;display:flex;flex-direction:column;gap:5px;margin-bottom:6px}.chat:empty{display:none}
+.m{padding:5px 9px;border-radius:8px;white-space:pre-wrap;overflow-wrap:anywhere;max-width:92%}.m.user{background:var(--you);align-self:flex-end}.m.agent{background:var(--bg);border:1px solid var(--line)}
+.m.tool{font-size:12px;color:var(--mut);padding:0 4px}.m.error{color:var(--bad);border:1px solid var(--bad)}
+.q{border-left:3px solid var(--warn);padding:4px 10px;margin:4px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.send{display:flex;gap:6px}.send input{flex:1;min-width:0}.mut{color:var(--mut)}table{width:100%;border-collapse:collapse}td{padding:7px 6px;border-top:1px solid var(--line);vertical-align:top}
+.box{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px;margin:10px 0}a{color:var(--acc);cursor:pointer}.files a{margin-right:12px}
+.row2{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0}textarea{width:100%;min-height:54px;margin:4px 0}
+.dl{display:grid;grid-template-columns:120px 1fr;gap:4px 12px}.dl+.dl{border-top:1px solid var(--line);margin-top:8px;padding-top:8px}
+@media(max-width:700px){.lane,.dl{grid-template-columns:1fr}}</style></head><body><main>
+<div class="row2"><h1>Team workflow</h1><span id="msg" class="mut"></span></div>
+<h2>Team</h2><div id="team"></div>
+<h2>Tickets <span class="mut" style="font-weight:400">(fake list; later the Jira board)</span></h2>
+<div class="box"><table id="tickets"></table><label class="mut"><input type="checkbox" id="auto"> auto-approve the gates (testing only)</label></div>
+<div id="detail"></div>
+</main><script src="app.js"></script></body></html>

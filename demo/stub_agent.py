@@ -62,21 +62,7 @@ def inspect_adapt():
           "# Inspection report\n\n- What went well: placeholder\n- What got in the way: placeholder\n- Suggested change: placeholder\n")
 
 
-def adhoc():
-    d = Path(TASK_DIR)
-    text = (d / "request.md").read_text(encoding="utf-8")
-    answers = (d / "answers.md").read_text(encoding="utf-8") if (d / "answers.md").exists() else ""
-    if len((text + answers).split()) < 8:   # stand-in for "the lane checks it has what it needs"
-        (d / "question.md").write_text(f"The {LANE} lane needs more detail. Please give: the repo, the task and the criteria.\n", encoding="utf-8")
-        return print("  asked a question", flush=True)
-    (d / "result.md").write_text(f"# {LANE} result (placeholder)\n\nRequest: {text.strip()}\n\nAnswers: {answers.strip() or '-'}\n\nThe real lane would do the work here.\n", encoding="utf-8")
-    print("  wrote result.md", flush=True)
-
-
 def main():
-    if TASK_DIR:
-        time.sleep(float(os.environ.get("DEMO_PACE", "1")))
-        return adhoc()
     print(f"  [{LANE}{'-' + REPO if REPO else ''}] stub agent (placeholder, no AI)", flush=True)
     time.sleep(float(os.environ.get("DEMO_PACE", "1")))
     {"planner": planner, "qe": qe, "dev": dev, "reviewer": reviewer, "inspect-adapt": inspect_adapt}[LANE]()

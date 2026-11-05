@@ -61,10 +61,10 @@ prompt: |
   Follow your agent instructions. They say what to read and what to write.
 
 adhoc_prompt: |
-  This is an ad-hoc request from a person, not a ticket run.
+  This is a chat with a person outside any ticket, not a ticket run. You are the {lane} lane.
   root: {root}
   task_dir: {task_dir}
-  Read skills/_common.md (section "Ad-hoc request") and your agent file, then handle the request in task_dir.
+  Read skills/_common.md (section "Ad-hoc chat") and your agent file. Answer in your messages. Put any file you produce in task_dir.
 
 deploy:
   # CI/CD stand-in, run once per repo in the Release order after the review passes.

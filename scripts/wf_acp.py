@@ -23,6 +23,7 @@ class Session:
         if exe is None:
             raise AcpError(f"command not found: {cmd[0]}")
         self.cwd, self.log, self.echo = str(cwd), log, echo
+        self.on_chunk = None     # function(text) called for each piece of the agent's message as it streams
         self._err = tempfile.TemporaryFile("w+", encoding="utf-8", errors="replace")
         self.cmdline = " ".join([exe] + list(cmd[1:]))
         self.proc = subprocess.Popen([exe] + list(cmd[1:]), cwd=self.cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
@@ -68,6 +69,14 @@ class Session:
                 raise AcpError("the agent process ended")
         return self._wait.pop(i)[1] or {}
 
+    def _raw(self, text):
+        if self.log:
+            try:
+                self.log.write(text)
+                self.log.flush()
+            except ValueError:   # the log was closed between turns
+                pass
+
     def _say(self, text):
         if self.log:
             self.log.write(text)
@@ -89,6 +98,12 @@ class Session:
                 kind, c = u.get("sessionUpdate", ""), u.get("content")
                 if kind == "agent_message_chunk" and isinstance(c, dict):
                     self._chunks.append(c.get("text", ""))
+                    if self.log:
+                        self.log.write(c.get("text", ""))
+                        self.log.flush()
+                    if self.on_chunk:
+                        self.on_chunk(c.get("text", ""))
+                    self._raw(c.get("text", ""))                     # live: the log fills as the agent speaks
                 elif kind == "tool_call":
                     self._say(f"[tool] {u.get('title', '')}\n")
             elif m.get("id") in self._wait:
@@ -117,10 +132,13 @@ class Session:
     def prompt(self, text):
         """Send one turn and wait for it to end. Returns (stop_reason, the agent's last message)."""
         self._chunks = []
-        self._say(f"\n>>> {text.strip()[:400]}\n")
+        self._say(f"\n>>> {' '.join(text.split())[:220]}\n")
         r = self._call("session/prompt", {"sessionId": self.sid, "prompt": [{"type": "text", "text": text}]})
         msg = "".join(self._chunks).strip()
-        self._say(f"<<< {msg}\n")
+        self._raw("\n")
+        if self.echo:
+            for line in msg.splitlines():
+                self.echo(line)
         if "error" in r or not r:
             raise AcpError(str((r or {}).get("error") or "the agent process ended"))
         return (r.get("result") or {}).get("stopReason", ""), msg

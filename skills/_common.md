@@ -43,11 +43,10 @@ Append one line to `events.log` (tab-separated: ISO timestamp in UTC, your ident
 
 The planner never proposes `spec_gap` for its own spec: if it cannot finish, it writes `question_raised`. You propose; the orchestrator decides.
 
-## Ad-hoc request
-A person can ask one lane for a single task outside any ticket. The task message then names a `task_dir` instead of a run folder.
-- Read `request.md` (and `answers.md` if it exists) in `task_dir`. Your lane's `ask_for` in `config/lanes.yaml` says what the person must give you.
-- If something you need is missing, write `question.md` in `task_dir`: one short message listing everything that is missing. Then stop. The person's answer arrives in this same session; then continue.
-- Otherwise do your lane's work and write `result.md` in `task_dir`. Write nothing outside `task_dir`.
+## Ad-hoc chat
+A person can also talk to one lane outside any ticket. The task message then says it is a chat and names a `task_dir`.
+- Your lane's `ask_for` in `config/lanes.yaml` says what the person must give you. If something is missing, ask one short message that lists everything you need, and wait; the answer arrives in this same session.
+- Do your lane's work and reply in your messages. Put any file you produce in `task_dir`. Write nothing else outside it and touch no ticket.
 
 ## Never
 - Edit `manifest.yaml`, anything in `config/`, or `skills/`.
