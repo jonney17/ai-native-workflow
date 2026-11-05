@@ -123,7 +123,10 @@ class Run:
 
     # ---- artifacts
     def path_of(self, key, repo=None):
-        return self.art / "changes" / repo if repo else self.art / key
+        """Where an artifact is: artifacts/ first, then the run folder (an agent may write it there)."""
+        if repo:
+            return self.art / "changes" / repo
+        return self.art / key if (self.art / key).exists() or not (self.dir / key).exists() else self.dir / key
 
     def mark(self, key, status, inputs=(), approved_by=None, repo=None, version=None):
         """Set an artifact's status and record its hash and the hashes of the inputs it was built from."""
@@ -135,13 +138,13 @@ class Run:
                 path = self.art / "changes" / repo
             else:
                 e = arts.get(key) or {"owner": "system"}
-                path = self.art / key
+                path = self.path_of(key)
             e["status"] = status
             if version:
                 e["version"] = version
             if path.exists():
                 e["hash"] = short_hash(path)
-            ins = {i: short_hash(self.art / i) for i in inputs if (self.art / i).exists()}
+            ins = {i: short_hash(self.path_of(i)) for i in inputs if self.path_of(i).exists()}
             if ins:
                 e["inputs"] = ins
             if approved_by:

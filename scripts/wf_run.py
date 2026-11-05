@@ -107,7 +107,13 @@ def apply_proposals(run, who):
         d = e["detail"]
         name = e["event"]
         lane = d.get("lane") or next((l for l in ("planner", "qe", "dev", "reviewer", "inspect-adapt") if l in e["actor"]), None)
-        if name == "verify_failed":
+        if lane == "inspect-adapt":
+            run.event("orchestrator", "proposal_ignored", {"id": pid, "event": name, "why": "Inspect & Adapt never blocks or reworks a ticket; its observations go in the report"})
+            say(who, f"ignored {name} from inspect-adapt (it never blocks a ticket)")
+        elif name == "spec_gap" and "spec.md" not in (run.load().get("artifacts") or {}):
+            run.event("orchestrator", "proposal_ignored", {"id": pid, "event": name, "why": "this kind of work has no spec"})
+            say(who, "ignored spec_gap: this kind of work has no spec.md")
+        elif name == "verify_failed":
             targets = [d["repo"]] if d.get("repo") else repos
             for r in targets:
                 run.mark("changes", "rejected", repo=r)
@@ -158,7 +164,7 @@ def record_outputs(run, cfg, kind, lane, repo, started, who):
     marked, expected = [], []
     for key in pk:
         expected.append(key)
-        path = run.art / "changes" / repo if (key == "changes" and repo) else run.art / key
+        path = run.art / "changes" / repo if (key == "changes" and repo) else run.path_of(key)
         if not path.exists() or W.latest_mtime(path) < started - 1:
             continue
         if key == "changes":
@@ -429,7 +435,7 @@ def main():
     if args.command == "start":
         return start(args, run)
     if args.command == "ready":
-        p = run.art / args.artifact
+        p = run.path_of(args.artifact)
         if not p.exists():
             sys.exit(f"error: {p} not found")
         if PLACEHOLDER.search(p.read_text(encoding="utf-8")) and not args.force:

@@ -25,9 +25,10 @@ Learn from a finished ticket. You run after the ticket is accepted and never blo
 All artifacts of the run, `events.log`, `metrics/*.json`, the whole `ledger/`, and the current `overlay/`.
 
 ## Produces
-`inspection-report.md`, ledger entries (`ledger/L-*.yaml`), and overlay candidates (`overlay/<lane>/L-*.md`).
+`artifacts/inspection-report.md` (inside the run's `artifacts/` folder, not the run folder itself), ledger entries (`ledger/L-*.yaml`), and overlay candidates (`overlay/<lane>/L-*.md`).
 
 ## Steps
+0. **Inspect the work, not the plumbing.** Your subject is what the other lanes did: their artifacts, `metrics/`, `logs/` and `events.log`. Do not inspect your own sessions (`inspect-adapt-*` logs and metrics, your own earlier blocked or repeated attempts). If you notice a defect in the workflow itself (gates, launcher, orchestrator, telemetry), list it under a heading `Workflow issues` in the report. It gets no candidate and no event.
 1. **Read the ledger first.** Skip anything already rejected. If an active candidate covers an observation, add evidence to that entry instead of making a new one.
 2. **Inspect.** From the trail and the metrics, report per lane: cost (tokens), time, attempts, rework loops, stale cascades, gate rejections and their reasons, spec gaps, AC coverage.
 3. **Check telemetry completeness.** If a lane's `otel_status` in `metrics/` is `missing` or `incomplete`, say so and draw no conclusions about its cost or time.
@@ -48,4 +49,4 @@ Add to the spec checklist: list behavior for empty and invalid inputs.
 ```
 
 ## Do not
-Promote, reject or revert candidates. The retro promotes or rejects; a script reverts on regression. Do not edit rules, gates, budgets or risk rules.
+Propose events (`question_raised`, `spec_gap`, ...). You never block or rework a ticket; the orchestrator ignores proposals from this lane. Do not create a candidate for your own lane from a single ticket. Promote, reject or revert candidates. The retro promotes or rejects; a script reverts on regression. Do not edit rules, gates, budgets or risk rules.
