@@ -212,7 +212,7 @@ class Run:
             d = e["detail"]
             if d.get("lane") != lane:
                 continue
-            if e["event"] == "lane_finished" and (d.get("repo") or "") == (repo or ""):
+            if e["event"] == "lane_finished" and (d.get("repo") or "") == (repo or "") and d.get("outcome") != "blocked":
                 used += 1
             elif e["event"] == "attempts_reset" and (not d.get("repo") or d.get("repo") == repo):
                 used = 0

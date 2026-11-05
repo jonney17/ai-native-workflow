@@ -64,7 +64,8 @@ def load_cfg(name, default=None):
 
 # ---------------------------------------------------------------- what to launch
 
-def agent_command(runner, run, lane, repo, attempt):
+def prompt_parts(runner, run, lane, repo, attempt):
+    """The task message for one session, and the values it was built from."""
     repo_path = ""
     if repo:
         reg, loc = L.read_registry(ROOT / "config" / "repos.yaml"), L.read_registry(ROOT / "config" / "repos.local.yaml")
@@ -77,7 +78,13 @@ def agent_command(runner, run, lane, repo, attempt):
     repo_line = (f"\n  repo: {repo}" + (f", at {repo_path}" if repo_path else "")) if repo else ""
     fmt = {"lane": lane, "repo": repo, "ticket": run.ticket, "run": run.run, "attempt": attempt, "root": str(ROOT),
            "run_dir": str(run.dir), "repo_line": repo_line, "extra_line": extra, "repo_path": repo_path}
-    prompt = str(runner.get("prompt", "")).format(**fmt)
+    return str(runner.get("prompt", "")).format(**fmt), fmt
+
+
+def agent_command(runner, run, lane, repo, attempt):
+    """Argv of a one-shot session (copilot -p)."""
+    prompt, fmt = prompt_parts(runner, run, lane, repo, attempt)
+    repo_path = fmt["repo_path"]
     fmt2 = dict(fmt, prompt=prompt, repo="-" + repo if repo else "")
     override = os.environ.get("WF_AGENT_CMD")
     base = json.loads(override) if override else list((runner.get("agent") or {}).get("command") or [])
@@ -87,6 +94,62 @@ def agent_command(runner, run, lane, repo, attempt):
     if repo and repo_path:
         extra_args += list((runner.get("agent") or {}).get("repo_args") or [])
     return [str(x).format(**fmt2) for x in base + extra_args]
+
+
+# ---------------------------------------------------------------- ACP: a lane keeps one session across questions
+
+sessions = {}   # unit -> wf_acp.Session, kept open while the lane waits for an answer
+seen = {}       # unit -> how many answers the session has already been given
+
+
+def use_acp(runner):
+    return bool(os.environ.get("WF_ACP_CMD")) or runner.get("mode") == "acp"
+
+
+def acp_cmd(runner, fmt, repo):
+    o = os.environ.get("WF_ACP_CMD")
+    acp = runner.get("acp") or {}
+    base = json.loads(o) if o else list(acp.get("command") or [])
+    extra = list(acp.get("repo_args") or []) if (repo and fmt["repo_path"] and not o) else []
+    return [str(x).format(**fmt) for x in base + extra]
+
+
+def answers_given(run, lane, repo):
+    return [e["detail"].get("text", "") for e in run.events() if e["event"] == "question_answered" and e["detail"].get("lane") == lane
+            and (e["detail"].get("repo") or "") in ("", repo)]
+
+
+def acp_turn(run, runner, lane, repo, unit, attempt, log, who, verbose):
+    """One turn of the lane's session: a new session with the task, or the person's answer sent to the open one."""
+    import wf_acp as A
+    prompt, fmt = prompt_parts(runner, run, lane, repo, attempt)
+    echo = (lambda line: say(who, line)) if verbose else None
+    given = answers_given(run, lane, repo)
+    sess, rc, msg = sessions.get(unit), 0, ""
+    with open(log, "a", encoding="utf-8", errors="replace") as lf:
+        try:
+            if sess is not None and sess.alive() and len(given) > seen.get(unit, 0):
+                text = "Answer from a person: " + " | ".join(given[seen.get(unit, 0):]) + "\nContinue your work."
+                sess.log, sess.echo = lf, echo
+            else:
+                if sess is not None:
+                    sess.close()
+                env = {"WF_TICKET": run.ticket, "WF_RUN": str(run.run), "WF_LANE": lane, "WF_ATTEMPT": str(attempt)}
+                if repo:
+                    env["WF_REPO"] = repo
+                sess = sessions[unit] = A.Session(acp_cmd(runner, fmt, repo), ROOT, env, lf, echo)
+                text = prompt
+            seen[unit] = len(given)
+            run.event("launcher", "lane_started", {"lane": lane, "repo": repo, "attempt": attempt, "mode": "acp"})
+            _, msg = sess.prompt(text)
+        except A.AcpError as e:
+            rc, msg = 1, str(e)
+            lf.write(f"\nERROR: {e}\n")
+            sessions.pop(unit, None)
+        finally:
+            sess and setattr(sess, "log", None)
+            run.event("launcher", "lane_exited", {"lane": lane, "repo": repo, "returncode": rc})
+    return rc, msg
 
 
 def launchable(res, lane, run, max_attempts):
@@ -156,7 +219,7 @@ def apply_proposals(run, who):
             run.decide(f"spec_gap accepted: {d.get('reason', d.get('gap', 'no detail given'))}. The spec goes back to the planner.")
             say(who, "applied spec_gap: spec.md goes back to the planner")
         elif name == "question_raised" and lane:
-            run.set_lane(lane, "blocked")
+            run.set_lane(lane, "blocked", d.get("repo") or None)
             say(who, f"{lane} is blocked on a question: {d.get('question', d.get('text', ''))}")
         elif name == "escalate" and lane:
             run.set_lane(lane, "failed")
@@ -211,28 +274,37 @@ def run_unit(run, cfg, kind, runner, budgets, lane, repo, who, verbose):
         say(who, f"{unit}: gave up after {max_attempts} attempts; escalating")
         run.release(unit)
         return
-    cmd = agent_command(runner, run, lane, repo, attempt)
-    launch = [PY, str(HERE / "wf_launch.py"), "--ticket", run.ticket, "--run", str(run.run), "--lane", lane,
-              "--attempt", str(attempt)] + (["--repo", repo] if repo else []) + ["--"] + cmd
     logdir = run.dir / "logs"
     logdir.mkdir(exist_ok=True)
     log = logdir / f"{unit}-a{attempt}.log"
     run.set_lane(lane, "working", repo or None)
     say(who, f"{unit}: starting attempt {attempt}")
     started = time.time()
-    with open(log, "w", encoding="utf-8", errors="replace") as lf:
-        p = subprocess.Popen(launch, cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                             text=True, encoding="utf-8", errors="replace")
-        for line in p.stdout:
-            lf.write(line)
-            if verbose:
-                say(who, line.rstrip())
-        rc = p.wait()
+    msg = None
+    if use_acp(runner):
+        rc, msg = acp_turn(run, runner, lane, repo, unit, attempt, log, who, verbose)
+    else:
+        cmd = agent_command(runner, run, lane, repo, attempt)
+        launch = [PY, str(HERE / "wf_launch.py"), "--ticket", run.ticket, "--run", str(run.run), "--lane", lane,
+                  "--attempt", str(attempt)] + (["--repo", repo] if repo else []) + ["--"] + cmd
+        with open(log, "w", encoding="utf-8", errors="replace") as lf:
+            p = subprocess.Popen(launch, cwd=str(ROOT), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                 text=True, encoding="utf-8", errors="replace")
+            for line in p.stdout:
+                lf.write(line)
+                if verbose:
+                    say(who, line.rstrip())
+            rc = p.wait()
     secs = round(time.time() - started, 1)
 
     marked, expected = [], []
     if rc == 0:
         marked, expected = record_outputs(run, cfg, kind, lane, repo, started, who)
+    stamp = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(started - 1))
+    if msg and rc == 0 and len(marked) < len(expected) and not any(
+            e["event"] in S.PROPOSALS and e["actor"] in (unit, lane) and e["time"] >= stamp for e in run.events()[-50:]):
+        # the agent stopped without finishing and without raising an event: what it said is its question
+        run.event(unit, "question_raised", {"lane": lane, "repo": repo, "question": msg[:1500]})
     apply_proposals(run, who)
     if lane == "reviewer":
         copy_review_decision(run, who)
@@ -240,12 +312,14 @@ def run_unit(run, cfg, kind, runner, budgets, lane, repo, who, verbose):
                    and e["event"] != "question_raised" for e in run.events()[-50:]
                    if e["time"] >= time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(started - 1)))
     outcome = "crashed" if rc != 0 else ("ok" if (expected and len(marked) == len(expected)) or proposed else "incomplete")
-    blocked = (run.load().get("lanes") or {}).get(lane)
-    blocked = blocked.get("status") if isinstance(blocked, dict) and not repo else None
+    ent = (run.load().get("lanes") or {}).get(lane)
+    blocked = (((ent.get("repos") or {}).get(repo) if repo else ent.get("status")) if isinstance(ent, dict) else None)
     if blocked == "blocked" and outcome == "incomplete":
         outcome = "blocked"
     if blocked not in ("blocked", "failed"):
         run.set_lane(lane, "waiting", repo or None)
+    if outcome != "blocked" and unit in sessions:   # a blocked lane keeps its session for the answer
+        sessions.pop(unit).close()
     run.event(f"worker:{lane}", "lane_finished", {"lane": lane, "repo": repo, "attempt": attempt, "returncode": rc,
                                                   "outcome": outcome, "seconds": secs, "artifacts": marked,
                                                   "log": log.relative_to(ROOT).as_posix()})

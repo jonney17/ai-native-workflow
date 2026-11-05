@@ -50,15 +50,53 @@ def answer(tid, text):
     with open(d / "answers.md", "a", encoding="utf-8") as f:
         f.write(f"- {text.strip()}\n")
     (d / "question.md").unlink(missing_ok=True)
-    launch(tid)
+    launch(tid, text.strip())
 
 
-def launch(tid):
+sessions = {}   # task id -> open ACP session (kept while the lane waits for the person)
+
+
+def _prompt(tid, lane, d):
+    runner = R.load_cfg("runner.yaml")
+    runner = dict(runner, prompt=str(runner.get("adhoc_prompt", "")).replace("{task_dir}", str(d)))
+    return runner, R.prompt_parts(runner, _Task(tid, d), lane, "", 1)
+
+
+def _turn_acp(tid, lane, d, text):
+    import wf_acp as A
+    runner, (prompt, fmt) = _prompt(tid, lane, d)
+    n = len(list(d.glob("run-*.log"))) + 1
+    with open(d / f"run-{n}.log", "w", encoding="utf-8", errors="replace") as lf:
+        try:
+            sess = sessions.get(tid)
+            if sess is not None and sess.alive() and text:
+                sess.log = lf
+            else:
+                sess = sessions[tid] = A.Session(R.acp_cmd(runner, fmt, ""), ROOT, {"WF_LANE": lane, "WF_TASK_DIR": str(d)}, lf)
+                text = prompt
+            _, msg = sess.prompt(text)
+            sess.log = None
+            if msg and not (d / "result.md").exists() and not (d / "question.md").exists():
+                (d / "question.md").write_text(msg + "\n", encoding="utf-8")   # it stopped and said something: that is its question
+            if (d / "result.md").exists() and not (d / "question.md").exists():
+                sessions.pop(tid, None)
+                sess.close()
+        except A.AcpError as e:
+            lf.write(f"\nERROR: {e}\n")
+            sessions.pop(tid, None)
+
+
+def launch(tid, answer_text=""):
     d = _dir(tid)
     lane = (d / "lane").read_text(encoding="utf-8").strip()
     runner = R.load_cfg("runner.yaml")
-    runner = dict(runner, prompt=str(runner.get("adhoc_prompt", "")).replace("{task_dir}", str(d)))
-    cmd = R.agent_command(runner, _Task(tid, d), lane, "", len(list(d.glob("run-*.log"))) + 1)
+    if R.use_acp(runner):
+        th = threading.Thread(target=_turn_acp, args=(tid, lane, d, ("Answer from a person: " + answer_text + "\nContinue.") if answer_text else ""), daemon=True)
+        th.start()
+        procs[tid] = th
+        return
+    runner, (prompt, fmt) = _prompt(tid, lane, d)
+    cmd = R.agent_command(runner, _Task(tid, d), lane, "", 1)
     n = len(list(d.glob("run-*.log"))) + 1
     log = open(d / f"run-{n}.log", "w", encoding="utf-8", errors="replace")
     env = {**os.environ, "WF_LANE": lane, "WF_TASK_DIR": str(d), "PYTHONIOENCODING": "utf-8"}
@@ -68,7 +106,7 @@ def launch(tid):
 def status(tid):
     d = _dir(tid)
     p = procs.get(tid)
-    if p and p.poll() is None:
+    if p is not None and (p.is_alive() if hasattr(p, "is_alive") else p.poll() is None):
         return "working"
     q, r = d / "question.md", d / "result.md"
     if q.exists() and (not r.exists() or q.stat().st_mtime >= r.stat().st_mtime):

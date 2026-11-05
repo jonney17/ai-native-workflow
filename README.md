@@ -46,7 +46,7 @@ Design: [docs/workflow-design.md](docs/workflow-design.md). Demo: [demo/README.m
 skills/          _common.md (rules every lane reads) and templates/ per lane
 config/          lanes.yaml (who needs/produces what), backlog.yaml (fake ticket list), risk-rules.yaml, budgets.yaml, runner.yaml, repos.yaml
 tickets/         tickets/<TICKET>/run-<N>/ : manifest.yaml, events.log, decisions.md, artifacts/
-scripts/         new_ticket.py, wf_status.py (read-only view), wf_run.py (workers + human commands), wf_ui.py (local web UI), wf_task.py (one-off lane requests), wf_state.py, wf_launch.py
+scripts/         wf_acp.py (long-lived agent session), acp_probe.py (experiment), new_ticket.py, wf_status.py (read-only view), wf_run.py (workers + human commands), wf_ui.py (local web UI), wf_task.py (one-off lane requests), wf_state.py, wf_launch.py
 demo/            demo.py and stub_agent.py
 ```
 

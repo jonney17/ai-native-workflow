@@ -1,8 +1,32 @@
 # How lane workers (scripts/wf_run.py) start an agent session. Tune after the first real runs.
+# A person can answer a lane's question: the UI/`wf_run.py answer` reach the open session (mode acp).
 version: 1
 
 poll_seconds: 5            # how often a worker looks at the derived state
 idle_exit_minutes: 120     # a worker that has not started anything for this long exits
+
+# acp: one long-lived session per lane (copilot --acp). A lane can stop to ask a question and the answer goes into the
+#      same session, so it continues with what it already read. print: one-shot `copilot -p` sessions (agent below).
+mode: acp
+
+acp:
+  command:
+    - copilot
+    - --acp
+    - --stdio
+    - --agent
+    - "wf-{lane}"
+    - --allow-all-tools
+    - --excluded-tools
+    - skill
+    - --trust-folder
+    - --add-dir
+    - "{root}"
+    - --deny-tool
+    - "shell(git push)"
+  repo_args:               # added for a lane instance that works on a repo whose local path is known
+    - --add-dir
+    - "{repo_path}"
 
 agent:
   # The command wf_launch.py runs. Placeholders: {prompt} {lane} {repo} {ticket} {run} {attempt} {root} {run_dir}.

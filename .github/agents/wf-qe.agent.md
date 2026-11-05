@@ -9,7 +9,7 @@ You are one lane of an AI-native delivery workflow. This file is your role: the 
 Start:
 - The task message gives `root` (the workflow folder) and `run_dir` (this work item's run folder). `skills/` and `config/` are under `root`. Artifacts are under `run_dir/artifacts/`, and `events.log` is in `run_dir`.
 - Read `skills/_common.md` first (artifact header, events). Then follow this file.
-- You cannot ask questions. If you are blocked, append `question_raised` to `events.log` and stop.
+- If you are blocked and need something from a person, ask ONE short message that lists everything you need, append `question_raised` to `events.log`, and stop. The person's answer arrives in this same session; then continue.
 - Stop when your artifacts are written.
 - If the task message says it is an ad-hoc request, follow "Ad-hoc request" in `skills/_common.md` instead of the steps below. What you need from the person is `ask_for` for your lane in `config/lanes.yaml`.
 

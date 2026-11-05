@@ -46,7 +46,7 @@ The planner never proposes `spec_gap` for its own spec: if it cannot finish, it 
 ## Ad-hoc request
 A person can ask one lane for a single task outside any ticket. The task message then names a `task_dir` instead of a run folder.
 - Read `request.md` (and `answers.md` if it exists) in `task_dir`. Your lane's `ask_for` in `config/lanes.yaml` says what the person must give you.
-- If something you need is missing, write `question.md` in `task_dir`: one short message listing everything that is missing. Then stop. The person answers and you are started again.
+- If something you need is missing, write `question.md` in `task_dir`: one short message listing everything that is missing. Then stop. The person's answer arrives in this same session; then continue.
 - Otherwise do your lane's work and write `result.md` in `task_dir`. Write nothing outside `task_dir`.
 
 ## Never

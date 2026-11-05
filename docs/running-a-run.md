@@ -31,7 +31,7 @@ python scripts/wf_ui.py          # opens http://127.0.0.1:8765 (this computer on
 - **Tickets:** the list comes from `config/backlog.yaml` (fake for now; later the Jira board). **Start** creates the ticket run, fills the ticket context and starts the workers, so the lanes process it one after the other. Click a ticket to see its lanes, read artifacts and logs, answer questions, approve or reject at the gates, retry a lane that gave up, and accept the ticket.
 - **Ask a lane:** the **Ask** button on any lane gives it one task outside a ticket. The form says what the lane needs from you (`ask_for` in `config/lanes.yaml`). If something is missing the lane writes a question; it shows on the page, you answer, and the lane runs again. The result appears on the page. Requests live in `tasks/` (git-ignored).
 
-It runs the same commands as below; use either. A lane cannot chat mid-session (Copilot runs with `--no-ask-user`): it asks, stops, and starts again with your answer.
+It runs the same commands as below; use either.
 
 ## What people do
 
@@ -50,9 +50,15 @@ It runs the same commands as below; use either. A lane cannot chat mid-session (
 
 Each lane is a Copilot custom agent: `.github/agents/wf-<lane>.agent.md` holds the role, the allowed `tools` and the instructions. There is no build step; edit the file. Rules shared by all lanes are in `skills/_common.md`, artifact templates in `skills/<lane>/templates/`.
 
-The command is in `config/runner.yaml` (`copilot --agent wf-<lane> -p ... --allow-all-tools --no-ask-user`). The Free plan cannot pin a model. To use another command set `WF_AGENT_CMD` (a JSON list); the demo does this with a stub.
+**Sessions (`mode` in `config/runner.yaml`).**
+- `acp` (default): a lane runs as one long-lived `copilot --acp --stdio` session (ACP, public preview). When the lane needs something it stops and asks; the lane shows as `blocked` / `waiting for you`; your answer (UI or `wf_run.py answer`) is sent to the SAME session, so the lane continues with what it already read. The session stays open only while the worker runs; if the worker is restarted, the lane starts a fresh session and gets your answer in its task message. A question does not count as a failed attempt.
+- `print`: one-shot `copilot -p ... --no-ask-user` sessions. The lane asks and stops; your answer goes into a new session's task message.
 
-Today the agents are placeholders: they write short artifacts and no code. They have no shell (`tools: read, search, edit`), so nothing asks for permissions. When a team member adds a real task that needs the shell or other folders, add `execute` to `tools` in that agent file and check what the CLI still asks for.
+If an agent stops without finishing its artifacts and without writing an event, the orchestrator treats its last message as its question.
+
+In `acp` mode permission requests are approved by the worker, except anything containing `git push`. The Free plan cannot pin a model. For tests set `WF_ACP_CMD` (a JSON list) to a fake ACP server (the demo uses `demo/stub_acp.py`) or `WF_AGENT_CMD` for `print` mode.
+
+Today the agents are placeholders: they write short artifacts and no code. They have no shell (`tools: read, search, edit`), so nothing asks for permissions. When a team member adds a real task that needs the shell, add `execute` to `tools` in that agent file.
 
 ## Rules the workers follow
 

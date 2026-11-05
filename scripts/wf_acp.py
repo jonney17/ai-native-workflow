@@ -1,0 +1,116 @@
+#!/usr/bin/env python3
+"""One long-lived agent session over ACP (Agent Client Protocol), e.g. `copilot --acp --stdio`.
+
+A lane keeps its session open between turns: it can stop to ask a question, a person answers, and the answer is
+sent to the SAME session, so the lane continues with everything it already read. Newline-delimited JSON-RPC on stdio.
+"""
+import json
+import os
+import shutil
+import subprocess
+import threading
+
+
+class AcpError(RuntimeError):
+    pass
+
+
+class Session:
+    def __init__(self, cmd, cwd, env=None, log=None, echo=None):
+        """cmd: argv of the ACP server. log: open text file for the transcript. echo: function(line) for live output."""
+        exe = shutil.which(cmd[0])
+        if exe is None:
+            raise AcpError(f"command not found: {cmd[0]}")
+        self.cwd, self.log, self.echo = str(cwd), log, echo
+        self.proc = subprocess.Popen([exe] + list(cmd[1:]), cwd=self.cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                     stderr=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace",
+                                     env={**os.environ, **(env or {})})
+        self._id, self._lock, self._wait = 0, threading.Lock(), {}
+        self._chunks = []
+        threading.Thread(target=self._read, daemon=True).start()
+        self._call("initialize", {"protocolVersion": 1, "clientCapabilities": {}})
+        r = self._call("session/new", {"cwd": self.cwd, "mcpServers": []})
+        self.sid = (r.get("result") or {}).get("sessionId")
+        if not self.sid:
+            raise AcpError(f"no session: {r}")
+
+    # ---- plumbing
+    def _send(self, obj):
+        self.proc.stdin.write(json.dumps(obj) + "\n")
+        self.proc.stdin.flush()
+
+    def _call(self, method, params):
+        with self._lock:
+            self._id += 1
+            i = self._id
+        ev = threading.Event()
+        self._wait[i] = [ev, None]
+        self._send({"jsonrpc": "2.0", "id": i, "method": method, "params": params})
+        while not ev.wait(1.0):
+            if self.proc.poll() is not None and not ev.is_set():
+                raise AcpError("the agent process ended")
+        return self._wait.pop(i)[1] or {}
+
+    def _say(self, text):
+        if self.log:
+            self.log.write(text)
+            self.log.flush()
+        if self.echo:
+            for line in text.splitlines():
+                self.echo(line)
+
+    def _read(self):
+        for line in self.proc.stdout:
+            try:
+                m = json.loads(line)
+            except ValueError:
+                continue
+            if "method" in m and "id" in m:                      # a request from the agent
+                self._send(self._answer_request(m))
+            elif "method" in m:                                  # streamed update
+                u = (m.get("params") or {}).get("update") or {}
+                kind, c = u.get("sessionUpdate", ""), u.get("content")
+                if kind == "agent_message_chunk" and isinstance(c, dict):
+                    self._chunks.append(c.get("text", ""))
+                elif kind == "tool_call":
+                    self._say(f"[tool] {u.get('title', '')}\n")
+            elif m.get("id") in self._wait:
+                self._wait[m["id"]][1] = m
+                self._wait[m["id"]][0].set()
+        for w in list(self._wait.values()):                      # process ended: release anyone waiting
+            w[0].set()
+
+    def _answer_request(self, m):
+        """Permission requests: allow, except `git push` (the same rule as --deny-tool "shell(git push)")."""
+        if m["method"] != "session/request_permission":
+            return {"jsonrpc": "2.0", "id": m["id"], "error": {"code": -32601, "message": "not supported"}}
+        opts = (m.get("params") or {}).get("options") or []
+        bad = "git push" in json.dumps(m.get("params") or {}).lower()
+        want = "reject" if bad else "allow"
+        pick = next((o.get("optionId") for o in opts if want in str(o.get("kind", "")).lower()), None)
+        self._say(f"[permission] {'denied' if bad else 'allowed'}\n")
+        if pick is None:
+            return {"jsonrpc": "2.0", "id": m["id"], "result": {"outcome": {"outcome": "cancelled"}}}
+        return {"jsonrpc": "2.0", "id": m["id"], "result": {"outcome": {"outcome": "selected", "optionId": pick}}}
+
+    # ---- use
+    def alive(self):
+        return self.proc.poll() is None
+
+    def prompt(self, text):
+        """Send one turn and wait for it to end. Returns (stop_reason, the agent's last message)."""
+        self._chunks = []
+        self._say(f"\n>>> {text.strip()[:400]}\n")
+        r = self._call("session/prompt", {"sessionId": self.sid, "prompt": [{"type": "text", "text": text}]})
+        msg = "".join(self._chunks).strip()
+        self._say(f"<<< {msg}\n")
+        if "error" in r or not r:
+            raise AcpError(str((r or {}).get("error") or "the agent process ended"))
+        return (r.get("result") or {}).get("stopReason", ""), msg
+
+    def close(self):
+        try:
+            self.proc.stdin.close()
+            self.proc.wait(timeout=5)
+        except Exception:
+            self.proc.kill()

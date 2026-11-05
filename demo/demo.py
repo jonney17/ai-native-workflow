@@ -95,7 +95,7 @@ def main():
     setup(ws)
     if args.command == "auto":
         env = {**os.environ, "WF_AGENT_CMD": '["%s", "%s"]' % (PY.replace("\\", "\\\\"), str(HERE / "stub_agent.py").replace("\\", "\\\\")),
-               "DEMO_PACE": "1"}
+               "WF_ACP_CMD": '["%s", "%s"]' % (PY.replace("\\", "\\\\"), str(HERE / "stub_acp.py").replace("\\", "\\\\")), "DEMO_PACE": "1"}
         sys.exit(subprocess.call([PY, "scripts/wf_run.py", "start", "--ticket", TICKET, "--auto-approve"], cwd=str(ws), env=env))
     print(f"Next, from {ws}:\n  python scripts/wf_run.py start --ticket {TICKET} --verbose")
 
