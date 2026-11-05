@@ -13,6 +13,7 @@ Commands (run from the project root):
   approve  --ticket T [--gate planner|reviewer] [--by NAME]    human gate: approve and move on
   reject   --ticket T --gate planner|reviewer --reason TEXT    human gate: send the work back
   answer   --ticket T --lane L [--text TEXT]                   unblock a lane after a question_raised
+  enable   --ticket T --lane L                                 turn on a lane that is off by default (Inspect & Adapt on a spike)
   accept   --ticket T [--by NAME]                              human: the ticket is accepted
   deployed --ticket T --repo R                                 record a deploy done outside (CI/CD)
   command  --ticket T --lane L [--repo R]                      print the agent command a worker would run
@@ -387,7 +388,7 @@ def do_accept(run, by):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("command", choices=["start", "worker", "command", "ready", "approve", "reject", "answer", "accept", "deployed", "status"])
+    ap.add_argument("command", choices=["start", "worker", "command", "ready", "approve", "reject", "answer", "enable", "accept", "deployed", "status"])
     ap.add_argument("--ticket", required=True)
     ap.add_argument("--run", type=int, default=None)
     ap.add_argument("--lane", default="")
@@ -448,6 +449,12 @@ def main():
         run.event(args.by, "question_answered", {"lane": args.lane, "text": args.text})
         run.decide(f"{args.by} answered the {args.lane} question: {args.text or '(see events.log)'}")
         print(f"{args.lane} unblocked")
+    elif args.command == "enable":
+        if not args.lane:
+            sys.exit("error: --lane is required")
+        run.update(lambda m: m.setdefault("lanes", {}).setdefault(args.lane, {}).update(enabled=True))
+        run.event(args.by, "lane_enabled", {"lane": args.lane})
+        print(f"{args.lane} enabled; start the workers again: python scripts/wf_run.py start --ticket {args.ticket}")
     elif args.command == "accept":
         do_accept(run, args.by)
     elif args.command == "deployed":

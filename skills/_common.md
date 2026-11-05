@@ -23,16 +23,17 @@ artifact: <name>
 ticket: <TICKET>
 run: <N>
 author: <your agent identity>
-inputs: [<input path>@<first 8 chars of sha256>, ...]
+inputs: [<path of each input you read>, ...]       # paths only: the orchestrator records the hashes in the manifest
 overlay_applied: [<ledger ids or empty>]
 status: draft            # set to ready when finished; the orchestrator confirms
 ---
 ```
 
-Recording input hashes is how staleness is detected: when an input changes, everything built from it is marked stale and re-queued.
+Staleness is detected from input hashes. You do not compute them (most lanes have no shell): the orchestrator records them in the manifest when it marks your artifact ready. When an input changes, everything built from it is marked stale and re-queued.
 
 ## Events
-Append one line to `events.log` (tab-separated: ISO timestamp, your identity, event, JSON detail).
+Append one line to `events.log` (tab-separated: ISO timestamp in UTC, your identity, event, JSON detail). Your identity is your lane name, for example `planner` or `dev-shop-web`, never a person's name.
+Write only the proposals below. Do not log progress or completion: the launcher and the orchestrator record those.
 Allowed proposals: `question_raised`, `spec_gap`, `verify_failed`, `review_rejected`, `escalate`.
 You propose; the orchestrator decides.
 

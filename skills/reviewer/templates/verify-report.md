@@ -3,7 +3,7 @@ artifact: verify-report.md
 ticket: <TICKET>
 run: <N>
 author: <agent identity>
-inputs: [test-plan.md@<hash>, changes@<hash>]
+inputs: [test-plan.md, changes]
 overlay_applied: []
 status: draft
 ---

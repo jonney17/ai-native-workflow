@@ -3,7 +3,7 @@ artifact: test-plan.md
 ticket: <TICKET>
 run: <N>
 author: <agent identity>
-inputs: [spec.md@<hash>, tasks.md@<hash>]
+inputs: [spec.md, tasks.md]
 overlay_applied: []
 status: draft
 ---

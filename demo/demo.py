@@ -11,6 +11,7 @@ Usage (from the project root):
   python demo/demo.py next             run the next step, then show the ticket status
   python demo/demo.py run              run all remaining steps, pausing between them
   python demo/demo.py status           show the ticket status now
+  python demo/demo.py sync             copy the project's current config, skills, scripts and agents into an existing workspace
   python demo/demo.py auto             fresh workspace, then ONE trigger: lane workers run the whole story on their own
   python demo/demo.py stale on|off     edit the approved spec to show the stale cascade, then undo
   python demo/demo.py reset            wipe the workspace and start over
@@ -487,7 +488,7 @@ def stale(d, mode):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("command", choices=["setup", "reset", "list", "next", "run", "status", "stale", "auto"])
+    ap.add_argument("command", choices=["setup", "reset", "list", "next", "run", "status", "stale", "auto", "sync"])
     ap.add_argument("arg", nargs="?", help="stale: on | off")
     ap.add_argument("--workspace", default=str(HERE / "workspace"))
     ap.add_argument("--fast", action="store_true", help="no delays and no pauses")
@@ -500,6 +501,12 @@ def main():
         return setup(d)
     if args.command == "auto":
         return auto(d, args)
+    if args.command == "sync":
+        d.require_ws()
+        for name in ("config", "skills", "scripts", ".github"):
+            shutil.copytree(PROJECT / name, d.ws / name, dirs_exist_ok=True,
+                            ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "repos.yaml", "repos.local.yaml"))
+        return print(f"Copied the project's config, skills, scripts and agents into {d.ws}. Tickets, repos and repo config are untouched.")
     if args.command == "list":
         return list_steps(d)
     d.require_ws()
