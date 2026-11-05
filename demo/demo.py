@@ -12,6 +12,7 @@ Usage (from the project root):
   python demo/demo.py run              run all remaining steps, pausing between them
   python demo/demo.py status           show the ticket status now
   python demo/demo.py sync             copy the project's current config, skills, scripts and agents into an existing workspace
+  python demo/demo.py intake           create the DEMO-1 ticket in an existing workspace and point deploys at the demo CI stand-in; then run wf_run.py start with REAL agents
   python demo/demo.py auto             fresh workspace, then ONE trigger: lane workers run the whole story on their own
   python demo/demo.py stale on|off     edit the approved spec to show the stale cascade, then undo
   python demo/demo.py reset            wipe the workspace and start over
@@ -488,7 +489,7 @@ def stale(d, mode):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("command", choices=["setup", "reset", "list", "next", "run", "status", "stale", "auto", "sync"])
+    ap.add_argument("command", choices=["setup", "reset", "list", "next", "run", "status", "stale", "auto", "sync", "intake"])
     ap.add_argument("arg", nargs="?", help="stale: on | off")
     ap.add_argument("--workspace", default=str(HERE / "workspace"))
     ap.add_argument("--fast", action="store_true", help="no delays and no pauses")
@@ -501,6 +502,20 @@ def main():
         return setup(d)
     if args.command == "auto":
         return auto(d, args)
+    if args.command == "intake":
+        d.require_ws()
+        if d.run_dir.exists():
+            sys.exit(f"error: {T} already exists in {d.ws}. Use a fresh workspace: python demo/demo.py setup --workspace <path>")
+        step_intake(d)
+        d.script("wf_run.py", "ready", "--ticket", T, "--by", "demo-human")
+        rp = d.ws / "config" / "runner.yaml"
+        deploy = [PY, str(HERE / "ci_deploy.py"), "--workspace", str(d.ws), "--ticket", T, "--repo", "{repo}"]
+        text = rp.read_text(encoding="utf-8")
+        assert "\n  command: null" in text
+        rp.write_text(text.replace("\n  command: null", "\n  command: " + json.dumps(deploy), 1), encoding="utf-8", newline="\n")
+        print(f"Deploys in this workspace now run the demo CI stand-in (config/runner.yaml, deploy.command).")
+        print(f"Start with real agents, from {d.ws}:\n  python scripts/wf_run.py start --ticket {T} --verbose")
+        return
     if args.command == "sync":
         d.require_ws()
         for name in ("config", "skills", "scripts", ".github"):
