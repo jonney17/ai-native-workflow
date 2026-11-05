@@ -1,80 +1,50 @@
-# Running a run: one trigger, every lane works on its own
+# Running a run
 
-There is no central controller and no fixed pipeline. A run is a set of **lane workers**. Each one is a small loop that:
+One trigger starts one worker per lane. Each worker is a small loop:
 
-1. derives the state from the files (`wf_status.py` logic),
-2. when its lane is ready and nobody holds it, takes a **lease**,
-3. launches one agent session through `wf_launch.py` (so telemetry is tagged),
-4. runs `otel_check.py`, marks the artifacts that session wrote as `ready` with their input hashes,
-5. applies the events agents proposed (`verify_failed`, `spec_gap`, `question_raised`, ...), once each,
-6. looks again.
+1. derive the state from the files (`wf_status.py`),
+2. when its lane is ready and nobody holds it, take a lease,
+3. launch one agent session (`wf_launch.py`),
+4. mark the artifacts the session wrote as `ready`, with the hashes of their inputs,
+5. apply the problem events the agent wrote, once each,
+6. look again.
 
-Workers share nothing but the run folder. You can run them all with one command or one per terminal.
+Workers share only the run folder. No central controller.
 
-## Start a run
+## Start
 
 ```
 python scripts/new_ticket.py --ticket PROJ-1 --kind story      # then fill artifacts/ticket-context.md
-python scripts/wf_run.py ready --ticket PROJ-1                 # intake done: the Planner may start
-python scripts/wf_run.py start --ticket PROJ-1                 # the one trigger
+python scripts/wf_run.py ready --ticket PROJ-1                 # the Planner may start
+python scripts/wf_run.py start --ticket PROJ-1 --verbose       # the one trigger; Ctrl+C stops all workers
 ```
 
-`start` launches one worker per lane (plus `ci`, the CI/CD stand-in, for stories and chores) and prints what they do. It stops when the ticket is Done or Escalated. Add `--verbose` to see the agents' output; it is always saved to `logs/` in the run folder.
+It ends when the ticket is Done or Escalated. Agent output is saved in `logs/` of the run folder.
 
-## What humans do
-
-The workers stop at a human gate and `start` prints the exact command. Nothing is edited by hand any more.
+## What people do
 
 | When | Command |
 |---|---|
-| Plan (or spike findings) is ready | `wf_run.py approve --ticket T --gate planner` or `reject --gate planner --reason "..."` |
-| Review is risk-flagged | `wf_run.py approve --ticket T --gate reviewer` |
-| An agent asked a question (`question_raised`) | `wf_run.py answer --ticket T --lane planner --text "..."` |
-| Deployed outside the workers (no `deploy.command`) | `wf_run.py deployed --ticket T --repo R` |
-| Acceptance (policy still TBD) | `wf_run.py accept --ticket T` |
+| Plan (or spike findings) is ready | `wf_run.py approve --ticket T --gate planner`, or `reject --gate planner --reason "..."` |
+| Review needs a human | `wf_run.py approve --ticket T --gate reviewer` |
+| An agent asked a question | `wf_run.py answer --ticket T --lane L [--repo R] --text "..."` |
+| A lane gave up after its attempts | `wf_run.py retry --ticket T --lane L [--repo R]`, then `start` again |
+| Deployed outside the workers | `wf_run.py deployed --ticket T --repo R` |
+| Acceptance (policy TBD) | `wf_run.py accept --ticket T` |
+
+`start` prints the exact command when it waits for a person. `wf_run.py command --ticket T --lane L` prints the agent command a worker would run.
+
+## Agents
+
+Each lane is a Copilot custom agent: `.github/agents/wf-<lane>.agent.md` holds the role, the allowed `tools` and the instructions. There is no build step; edit the file. Rules shared by all lanes are in `skills/_common.md`, artifact templates in `skills/<lane>/templates/`.
+
+The command is in `config/runner.yaml` (`copilot --agent wf-<lane> -p ... --allow-all-tools --no-ask-user`). The Free plan cannot pin a model. To use another command set `WF_AGENT_CMD` (a JSON list); the demo does this with a stub.
+
+Today the agents are placeholders: they write short artifacts and no code. They have no shell (`tools: read, search, edit`), so nothing asks for permissions. When a team member adds a real task that needs the shell or other folders, add `execute` to `tools` in that agent file and check what the CLI still asks for.
 
 ## Rules the workers follow
 
-- **Lease:** one session per lane instance (per repo for Dev), created atomically. A crashed session's lease expires (`config/budgets.yaml`, `lease_minutes`).
-- **Attempts:** each launch gets the next attempt number, counted from `lane_finished` events. After `max_attempts` the lane is marked failed and the ticket is Escalated.
-- **Outcome:** `ok` (artifacts written, or a proposal applied), `incomplete` (nothing usable), `crashed` (non-zero exit), `blocked` (a question). Incomplete and crashed sessions are retried.
-- **Rework:** `verify_failed` rejects `changes/<repo>` only; that Dev instance starts again and the verify report goes stale, which sends the Reviewer back.
-- **Release order:** the `ci` worker deploys in the order from `tasks.md` and stops on the first failure.
-- **Manifest writes** are atomic and locked; only workers and the commands above write it. Agents never do.
-
-## Agents: one per lane
-
-Each lane is a Copilot **custom agent**, not a prompt. The role, the rules and the allowed tools live in `.github/agents/wf-<lane>.agent.md`; the task message only says which work item to do it for.
-
-- **The agent file is the lane's instructions.** Edit `.github/agents/wf-<lane>.agent.md` directly: the frontmatter sets the description and the allowed `tools` (and optionally `model`), the body is what the lane does. There is no build step. Rules shared by every lane stay in `skills/_common.md`, which each agent reads first; artifact templates stay in `skills/<lane>/templates/`.
-- **Launch:** `copilot --agent wf-<lane> -p "<task>" --allow-all-tools --no-ask-user --add-dir <root> ...` (see `config/runner.yaml`; print the exact command with `wf_run.py command --ticket T --lane L [--repo R]`). `--add-dir <root>` is what lets a Dev session running inside a repo still find the agents.
-- **Permissions are enforced by the agent's `tools`:** for example the Planner has no shell, so a spike cannot run commands. Per-lane extras (`--deny-tool`, `--max-ai-credits`) go under `agent.by_lane`.
-- **Unverified:** the agent file format and the tool aliases (`read`, `search`, `edit`, `execute`) follow GitHub's custom agent format as I know it, and `--agent wf-planner` has not been run yet. First check: `copilot --agent wf-planner -p "say your lane and the tools you have" --allow-all-tools`. If it does not load, the frontmatter of the five agent files is what to adjust.
-
-To use any other command, set `WF_AGENT_CMD` (a JSON list); the demo does this to use scripted stub agents.
-
-## Try it without AI
-
-```
-python demo/demo.py auto                    # the whole DEMO-1 story in a fresh workspace, humans simulated
-python demo/demo.py auto --gates-by-hand    # same, but you approve at the gates
-```
-
-`--auto-approve` on `start` plays the human at every gate. It is for testing the flow only.
-
-## Overlay candidates: which ones a session gets
-
-`wf_launch.py` decides, for each session, which `overlay/<lane>/L-*.md` candidates apply. A candidate applies when:
-
-- its ledger entry (`ledger/<id>.yaml`) exists and has `status: active`,
-- its front matter has no ISO `expires: YYYY-MM-DD` in the past (free text such as `end of current sprint` is not evaluated: the retro closes those by setting the ledger status),
-- the ticket is of the kind the evidence came from (ledger `kind`, or `applies_to: [story, spike]` / `[all]` in the candidate's front matter),
-- it is within `limits.max_active_per_lane` in `config/overlay-rules.yaml`.
-
-Skipped candidates and the reason are recorded in the `lane_started` event (`overlay_skipped`). Applied ones are tagged on the telemetry (`workflow.overlay`), added to the ledger entry's `active_on`, and named in the task message, so the agent reads only those. To remove a candidate, set its ledger status to `rejected` (or delete the file).
-
-## Smoke mode (flow test with real agents)
-`wf_run.py start --ticket T --smoke` launches the real lane agents but tells them to skip the real work: Dev writes only
-`changes/<repo>/summary.md` and `notes.md`, the Reviewer writes a passing verify and review report, nothing in the repos is
-touched, and the CI stand-in fakes the deploy. Use it to prove hand-offs, hashes, gates and events quickly. If an agent
-skips the artifact header or the MACHINE lines, that is a finding about the flow, not about the code.
+- One session per lane instance (per repo for Dev), through a lease that expires (`config/budgets.yaml`).
+- Attempts: counted from `lane_finished` events; after `max_attempts` the lane fails and the ticket is Escalated.
+- Outcomes: `ok`, `incomplete` (nothing usable, retried), `crashed` (non-zero exit, retried), `blocked` (a question).
+- Only workers and the commands above write `manifest.yaml`. Agents never do.

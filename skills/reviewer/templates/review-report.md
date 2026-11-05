@@ -4,7 +4,6 @@ ticket: <TICKET>
 run: <N>
 author: <agent identity>
 inputs: [test-plan.md, changes]
-overlay_applied: []
 status: draft
 ---
 human_required: false

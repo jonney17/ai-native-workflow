@@ -2,7 +2,7 @@
 """Lane workers: start a run once, then every lane works on its own.
 
 Each lane is a small loop that looks at the derived state (scripts/wf_status.py). When its lane is ready
-it takes a lease, launches one agent session through scripts/wf_launch.py, checks the telemetry, records
+it takes a lease, launches one agent session through scripts/wf_launch.py, records
 the artifacts it produced in the manifest, and applies the events that agents proposed. There is no
 central controller: workers only share the files in the run folder.
 
@@ -64,60 +64,29 @@ def load_cfg(name, default=None):
 
 # ---------------------------------------------------------------- what to launch
 
-# --smoke: real agents, trivial work. Proves the hand-offs (artifacts, hashes, gates, events) without real engineering.
-SMOKE = {
-    "*": "\n  SMOKE TEST: do NOT do the real work. Do not change any repo, run no tests. Keep every artifact body to a few lines. "
-         "Still write the artifact header exactly as _common.md says. Say in one line what you would have done.",
-    "dev": "\n  SMOKE TEST: do NOT do the real work. Do not edit or commit anything in the repo. Write only "
-           "artifacts/changes/{repo}/summary.md and artifacts/changes/{repo}/notes.md (header per _common.md, inputs "
-           "[spec.md, design.md, tasks.md], body: one line naming what you would have changed). Write no events.",
-    "reviewer": "\n  SMOKE TEST: do NOT run tests or read diffs. Write artifacts/verify-report.md (header, inputs [test-plan.md, changes], "
-                "line 'Result: **PASS**', one-line coverage table) and artifacts/review-report.md (header, then the two MACHINE lines "
-                "'human_required: false' and 'signals: []', then 'Verdict: pass' and one line of review). Write no events.",
-}
-
-
 def agent_command(runner, run, lane, repo, attempt):
     repo_path = ""
     if repo:
         reg, loc = L.read_registry(ROOT / "config" / "repos.yaml"), L.read_registry(ROOT / "config" / "repos.local.yaml")
         found = L.resolve_repo(repo, loc) if repo in reg else None
-        if found is None:
-            sys.exit(f"error: no local path for repo {repo!r}. Set it in config/repos.local.yaml")
-        repo_path = str(found)
-    ids, _ = L.active_overlay(lane, str(run.load().get("kind") or "story"))
-    if ids:
-        parts = []
-        for i in ids:
-            body = (ROOT / "overlay" / lane / f"{i}.md").read_text(encoding="utf-8")
-            body = body.split("---", 2)[2] if body.startswith("---") and body.count("---") >= 2 else body
-            parts.append(f"  [{i}] " + " ".join(body.split())[:1500])
-        overlay_line = ("\n  overlay candidates to apply (advisory hints from earlier runs; apply them, and list their ids in "
-                        "overlay_applied in your artifact header):\n" + "\n".join(parts))
-    else:
-        overlay_line = "\n  overlay candidates to apply: none"
+        repo_path = str(found) if found else ""
     answers = [e["detail"].get("text", "") for e in run.events()
                if e["event"] == "question_answered" and e["detail"].get("lane") == lane
                and (not repo or e["detail"].get("repo") in ("", None, repo)) and e["detail"].get("text")]
-    if answers:
-        overlay_line += "\n  answers from a person to your earlier question(s), oldest first:\n" + "\n".join("  - " + a for a in answers)
-    fmt = {"overlay_line": overlay_line, "lane": lane, "repo": repo, "ticket": run.ticket, "run": run.run, "attempt": attempt,
-           "root": str(ROOT), "run_dir": str(run.dir), "repo_phrase": f" for repo {repo}" if repo else "",
-           "repo_line": (f"\n  repo: {repo}, at {repo_path}. Your working directory is the workflow root; work in the repo by "
-                         f"absolute path and use `git -C {repo_path}`.") if repo else "",
-           "repo_path": repo_path}
+    extra = ("\n  answers from a person to your earlier question(s), oldest first:\n" + "\n".join("  - " + a for a in answers)) if answers else ""
+    repo_line = (f"\n  repo: {repo}" + (f", at {repo_path}" if repo_path else "")) if repo else ""
+    fmt = {"lane": lane, "repo": repo, "ticket": run.ticket, "run": run.run, "attempt": attempt, "root": str(ROOT),
+           "run_dir": str(run.dir), "repo_line": repo_line, "extra_line": extra, "repo_path": repo_path}
     prompt = str(runner.get("prompt", "")).format(**fmt)
-    if os.environ.get("WF_SMOKE"):
-        prompt += SMOKE.get(lane, SMOKE["*"]).format(**fmt)
     fmt2 = dict(fmt, prompt=prompt, repo="-" + repo if repo else "")
     override = os.environ.get("WF_AGENT_CMD")
     base = json.loads(override) if override else list((runner.get("agent") or {}).get("command") or [])
     if not base:
         sys.exit("error: no agent command. Set agent.command in config/runner.yaml or WF_AGENT_CMD")
-    extra = list(((runner.get("agent") or {}).get("by_lane") or {}).get(lane) or [])
-    if repo:
-        extra += list((runner.get("agent") or {}).get("repo_args") or [])
-    return [str(x).format(**fmt2) for x in base + extra]
+    extra_args = list(((runner.get("agent") or {}).get("by_lane") or {}).get(lane) or [])
+    if repo and repo_path:
+        extra_args += list((runner.get("agent") or {}).get("repo_args") or [])
+    return [str(x).format(**fmt2) for x in base + extra_args]
 
 
 def launchable(res, lane, run, max_attempts):
@@ -244,7 +213,7 @@ def run_unit(run, cfg, kind, runner, budgets, lane, repo, who, verbose):
         return
     cmd = agent_command(runner, run, lane, repo, attempt)
     launch = [PY, str(HERE / "wf_launch.py"), "--ticket", run.ticket, "--run", str(run.run), "--lane", lane,
-              "--attempt", str(attempt), "--stay-in-root"] + (["--repo", repo] if repo else []) + ["--"] + cmd
+              "--attempt", str(attempt)] + (["--repo", repo] if repo else []) + ["--"] + cmd
     logdir = run.dir / "logs"
     logdir.mkdir(exist_ok=True)
     log = logdir / f"{unit}-a{attempt}.log"
@@ -260,14 +229,6 @@ def run_unit(run, cfg, kind, runner, budgets, lane, repo, who, verbose):
                 say(who, line.rstrip())
         rc = p.wait()
     secs = round(time.time() - started, 1)
-
-    chk = [PY, str(HERE / "otel_check.py"), "--ticket", run.ticket, "--run", str(run.run), "--lane", lane, "--attempt", str(attempt)]
-    if repo:
-        chk += ["--repo", repo]
-    r = subprocess.run(chk, cwd=str(ROOT), capture_output=True, text=True, encoding="utf-8", errors="replace")
-    out = r.stdout.splitlines()
-    otel = (out[0].split(":", 1)[1].strip() if out and out[0].startswith("otel_status:") else "not checked")
-    tok = next((l.strip() for l in out if "tokens in/out" in l), "")
 
     marked, expected = [], []
     if rc == 0:
@@ -287,9 +248,9 @@ def run_unit(run, cfg, kind, runner, budgets, lane, repo, who, verbose):
         run.set_lane(lane, "waiting", repo or None)
     run.event(f"worker:{lane}", "lane_finished", {"lane": lane, "repo": repo, "attempt": attempt, "returncode": rc,
                                                   "outcome": outcome, "seconds": secs, "artifacts": marked,
-                                                  "otel": otel, "log": log.relative_to(ROOT).as_posix()})
+                                                  "log": log.relative_to(ROOT).as_posix()})
     run.release(unit)
-    say(who, f"{unit}: attempt {attempt} {outcome} in {secs}s; marked {', '.join(marked) or 'nothing'}; telemetry {otel} {tok}".rstrip())
+    say(who, f"{unit}: attempt {attempt} {outcome} in {secs}s; marked {', '.join(marked) or 'nothing'}")
     if outcome != "ok":
         say(who, f"{unit}: see {log.relative_to(ROOT).as_posix()}")
 
@@ -345,8 +306,8 @@ def ci_worker(args):
     run = W.Run(args.ticket, args.run)
     runner = load_cfg("runner.yaml")
     cmd_t = json.loads(os.environ["WF_DEPLOY_CMD"]) if os.environ.get("WF_DEPLOY_CMD") else (runner.get("deploy") or {}).get("command")
-    if os.environ.get("WF_SMOKE") and not cmd_t:
-        cmd_t = [PY, "-c", "print('smoke deploy of {repo}')"]
+    if not cmd_t:   # placeholder: the team plugs in the real merge/deploy command (deploy.command in runner.yaml)
+        cmd_t = [PY, "-c", "print('placeholder deploy of {repo}')"]
     poll = float(runner.get("poll_seconds", 5))
     who, said = "ci", None
     while True:
@@ -371,7 +332,7 @@ def ci_worker(args):
                 run.event("ci_cd", "deployed" if ok else "deploy_failed", {"repo": repo})
                 say(who, f"{repo}: {'deployed' if ok else 'deploy FAILED'}" + ("" if ok else "\n" + (r.stdout + r.stderr)[-600:]))
                 continue
-        msg = "waiting for the review" if res["status"] != "Deploying" else ("waiting for a person: wf_run.py deployed --repo <name>" if not cmd_t else "")
+        msg = "waiting for the review" if res["status"] != "Deploying" else ""
         if msg and msg != said:
             say(who, msg)
             said = msg
@@ -467,7 +428,6 @@ def main():
     ap.add_argument("--text", default="")
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--auto-approve", action="store_true", help="play the human at every gate (testing only)")
-    ap.add_argument("--smoke", action="store_true", help="real agents, trivial work, no repo changes; fake deploy (flow test)")
     ap.add_argument("--verbose", action="store_true", help="show the agent's output as it runs")
     args = ap.parse_args()
     if args.run is None:
@@ -556,9 +516,6 @@ def main():
 
 
 def start(args, run):
-    if args.smoke:
-        os.environ["WF_SMOKE"] = "1"
-        print("SMOKE mode: agents are told to skip the real work; deploys are fake.")
     res = S.analyze(args.ticket, args.run)
     kind = res["kind"]
     lanes = [l for l, r in res["lanes"].items() if r["state"] != "disabled"]

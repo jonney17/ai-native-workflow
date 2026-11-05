@@ -25,7 +25,6 @@ import json
 import re
 import sys
 import time
-from collections import Counter
 from pathlib import Path
 
 sys.dont_write_bytecode = True
@@ -116,22 +115,14 @@ def proposal_id(e):
     return hashlib.sha1((e["time"] + e["actor"] + e["event"] + json.dumps(e["detail"], sort_keys=True)).encode()).hexdigest()[:10]
 
 
-def telemetry(run_dir, events):
+def sessions(run_dir, events):
     out = {}
     for e in events:
         if e["event"] != "lane_started":
             continue
         d = e["detail"]
         lane, repo, att = d.get("lane"), d.get("repo") or "", d.get("attempt") or 1
-        name = "-".join(p for p in (lane, repo) if p) + f"-a{att}.json"
-        status = "not checked"
-        mp = run_dir / "metrics" / name
-        if mp.exists():
-            try:
-                status = json.loads(mp.read_text(encoding="utf-8")).get("otel_status", "unknown")
-            except (json.JSONDecodeError, OSError):
-                status = "unreadable"
-        out.setdefault(lane, []).append({"repo": repo, "attempt": att, "otel": status})
+        out.setdefault(lane, []).append({"repo": repo, "attempt": att})
     return out
 
 
@@ -379,10 +370,6 @@ def compute_lanes(cfg, kind, lane_names, view, manifest, dev_repos, tele, warnin
             rec["note"] = lane_note(rec, unmet, why, rework)
             if mstat == "done" and rec["state"] != "done":
                 warnings.append(f"manifest says lane {lane} is done, but its artifacts say {rec['state']}")
-        if lane in tele:
-            c = Counter(t["otel"] for t in tele[lane])
-            extra = ", ".join(f"{n} {k}" for k, n in sorted(c.items()))
-            rec["note"] = (rec["note"] + "  " if rec["note"] else "") + f"[sessions: {len(tele[lane])}; otel: {extra}]"
         lanes[lane] = rec
     return lanes
 
@@ -559,10 +546,6 @@ def next_actions(ticket, run, kind, lanes, gates, view, manifest, dev_repos, rel
     if status == "Awaiting acceptance":
         acts.append(("human", f"Decide acceptance (policy is TBD), then: python scripts/wf_run.py accept --ticket {ticket}"))
 
-    for lane, runs in tele.items():
-        unchecked = [t for t in runs if t["otel"] == "not checked"]
-        if unchecked:
-            acts.append(("agent", f"Check telemetry for {lane}: python scripts/otel_check.py --ticket {ticket} --run {run} --lane {lane}"))
     if not acts and status != "Done":
         acts.append(("system", "Nothing can start yet. The Lanes table says what each waiting lane needs"))
     return acts
@@ -679,7 +662,7 @@ def analyze(ticket, run=None):
             view["changes"]["repos"].setdefault(r, {"status": "missing", "recorded": "missing", "reason": None, "entry": {}})
 
     events = read_events(run_dir / "events.log")
-    tele = telemetry(run_dir, events)
+    tele = sessions(run_dir, events)
     lanes = compute_lanes(cfg, kind, lane_names, view, manifest, dev_repos, tele, warnings)
     gates = {}
     for lane in ("planner", "reviewer"):

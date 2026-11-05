@@ -4,7 +4,6 @@ ticket: <TICKET>
 run: <N>
 author: <agent identity>
 inputs: [spec.md, tasks.md]
-overlay_applied: []
 status: draft
 ---
 <!-- Template. Keep the headings and the machine-read parts (marked MACHINE). Delete these comments. -->

@@ -37,10 +37,10 @@ lanes:
       when: risk_flagged       # see config/risk-rules.yaml
 
   inspect-adapt:
-    purpose: Learn from the finished ticket (inspect trail and telemetry, adapt, log to ledger).
+    purpose: Look back at the finished ticket and report what worked and what did not.
     trigger: ticket_accepted   # acceptance policy is TBD, see acceptance block in the manifest
-    requires: [events.log, "metrics/*", "all artifacts"]
-    produces: [inspection-report.md, "ledger/L-*.yaml", "overlay/<lane>/L-*.md"]
+    requires: [events.log, "all artifacts"]
+    produces: [inspection-report.md]
     independent_of: [planner, qe, dev, reviewer]
 
 # Work kinds. `story` is the default. The manifest's `kind` picks the profile.

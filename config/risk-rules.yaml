@@ -1,6 +1,6 @@
 # Decides when review needs a human. HUMANS EDIT THIS FILE ONLY.
-# Inspect & Adapt must never change it (see overlay-rules.yaml).
-# Starting values: tune at sprint retro using the ledger.
+# Inspect & Adapt must never change it.
+# Starting values: tune at the sprint retro.
 version: 1
 # Multi-repo alone is not a risk: independent changes with no contract, schema or other flagged impact
 # go to the AI reviewer. Contract and schema changes are caught by the touches_* signals below.

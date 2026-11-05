@@ -1,40 +1,31 @@
-# How lane workers (scripts/wf_run.py) start an agent session. Skeleton values: tune after the first real runs.
-# UNVERIFIED: the copilot flags below come from `copilot -h` (v1.0.x) and have not been run through the workers yet.
+# How lane workers (scripts/wf_run.py) start an agent session. Tune after the first real runs.
 version: 1
 
 poll_seconds: 5            # how often a worker looks at the derived state
 idle_exit_minutes: 120     # a worker that has not started anything for this long exits
 
 agent:
-  # The command wf_launch.py runs after `--`. Placeholders: {prompt} {lane} {repo} {ticket} {run} {attempt}
-  # {root} (project folder) {run_dir} (tickets/<ticket>/run-<n>, absolute). Override per shell with the
-  # environment variable WF_AGENT_CMD (a JSON list), for example to use the demo's scripted stub agent.
+  # The command wf_launch.py runs. Placeholders: {prompt} {lane} {repo} {ticket} {run} {attempt} {root} {run_dir}.
+  # Override per shell with the environment variable WF_AGENT_CMD (a JSON list), e.g. the demo's stub agent.
   command:
     - copilot
     - --agent
-    - "wf-{lane}"                  # the lane's role and tools: .github/agents/wf-<lane>.agent.md (edit that file)
+    - "wf-{lane}"                  # the lane's role: .github/agents/wf-<lane>.agent.md (edit that file)
     - -p
-    - "{prompt}"                   # only the task: which work item. The role is not in the prompt.
+    - "{prompt}"                   # only the task: which work item
     - --allow-all-tools            # required for non-interactive mode
-    # No --model here: the Free plan only allows what auto picks, so a pinned model fails. The model used is recorded
-    # per session in metrics/*.json and Inspect & Adapt treats a change of model as a confounder. To pin one,
-    # add "--model", "<name>" with a model your plan includes.
     - --excluded-tools
-    - skill                        # lanes follow their agent file only, not the user's personal Copilot skills (checked)
-    - --no-ask-user                # the lane must not wait for an answer; it proposes question_raised instead
-    - --trust-folder               # trust this folder's skills and instructions for this one session
+    - skill                        # lanes follow their agent file only, not personal Copilot skills
+    - --no-ask-user                # a lane never waits for an answer; it raises question_raised instead
+    - --trust-folder
     - --add-dir
     - "{root}"
     - --deny-tool
     - "shell(git push)"
     - -n
     - "{ticket}-{lane}{repo}-a{attempt}"
-  # Extra arguments per lane (appended). Example: a spike's Planner may read and write files but not run shell:
-  #   planner: [--deny-tool, shell]
-  # A per-lane credit cap is available too: [--max-ai-credits, "20"]
-  by_lane: {}
-  # Added for a lane instance that works in a repo (Dev). The session starts in the workflow root, where the lane
-  # agents are found, and is allowed into the repo with --add-dir.
+  by_lane: {}              # extra arguments for one lane, e.g. dev: [--model, x] (the Free plan cannot pin a model)
+  # Added for a lane instance that works on a repo, when its local path is known (config/repos.local.yaml).
   repo_args:
     - --add-dir
     - "{repo_path}"
@@ -43,10 +34,10 @@ prompt: |
   Do your lane's work for this work item.
   root: {root}
   run_dir: {run_dir}
-  ticket: {ticket}, run: {run}, attempt: {attempt}{repo_line}{overlay_line}
+  ticket: {ticket}, run: {run}, attempt: {attempt}{repo_line}{extra_line}
   Follow your agent instructions. They say what to read and what to write.
 
 deploy:
   # CI/CD stand-in, run once per repo in the Release order after the review passes.
-  # Placeholders: {repo} {ticket} {run} {root}. null = a person records it: wf_run.py deployed --repo <name>
+  # Placeholders: {repo} {ticket} {run} {root}. null = a placeholder that only prints. The team plugs in the real command.
   command: null

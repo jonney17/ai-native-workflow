@@ -1,23 +1,17 @@
 #!/usr/bin/env python3
-"""Launch one lane session with telemetry attributes attached.
+"""Start one lane session and record it in the run's events.log (lane_started, lane_exited).
 
-It sets the Copilot OTel environment, tags the session with workflow.* resource
-attributes, records lane_started / lane_exited in the ticket's events.log, and then
-runs your command. Telemetry is written to otel-dump/ by default (file exporter).
-
-Usage:
+The orchestrator (wf_run.py) calls this; you can also call it by hand:
   python scripts/wf_launch.py --ticket PROJ-123 --run 1 --lane dev --repo repo-a --attempt 1 -- copilot ...
-  python scripts/wf_launch.py --ticket PROJ-123 --lane planner --print-env      # show env only
+The command runs from the workflow root. A repo's local path, when known, is passed in $WF_REPO_PATH.
 """
 import argparse
 import json
 import os
-import re
 import shutil
 import subprocess
 import sys
 import time
-import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -32,11 +26,6 @@ KIND_LANES = {  # keep in sync with kinds in config/lanes.yaml
 
 def now():
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
-
-
-def clean(value):
-    """Resource attribute values must not contain , = or spaces."""
-    return str(value).replace(",", "_").replace("=", "_").replace(" ", "_")
 
 
 def log_event(events, actor, event, detail):
@@ -89,197 +78,51 @@ def read_kind(manifest):
     return "story"
 
 
-def read_front(path):
-    """Simple front matter of an overlay candidate: key: value lines between the first two --- lines."""
-    out = {}
-    text = path.read_text(encoding="utf-8")
-    if text.startswith("---"):
-        for line in text.split("---", 2)[1].splitlines():
-            if ":" in line:
-                k, v = line.split(":", 1)
-                out[k.strip()] = v.split(" #")[0].strip()
-    return out
-
-
-def read_ledger(ledger_id):
-    """The few ledger fields the launcher needs (status, kind, active_on), read as plain text."""
-    p = ROOT / "ledger" / f"{ledger_id}.yaml"
-    if not p.exists():
-        return None
-    out = {}
-    for line in p.read_text(encoding="utf-8").splitlines():
-        for key in ("status", "kind"):
-            if line.startswith(key + ":"):
-                out[key] = line.split(":", 1)[1].split(" #")[0].strip().strip("\"'")
-    return out
-
-
-def active_overlay(lane, kind):
-    """Candidates to apply to this session. Returns (applied ids, {skipped id: reason}).
-
-    A candidate applies when its ledger entry is active, it has not passed an ISO `expires:` date, and the
-    ticket is of the kind the evidence came from (ledger `kind`, or the candidate's `applies_to:` list).
-    At most limits.max_active_per_lane apply. Free-text expiry such as 'end of current sprint' is not evaluated:
-    the retro closes those by changing the ledger status."""
-    d = ROOT / "overlay" / lane
-    if not d.is_dir():
-        return [], {}
-    rules = {}
-    rp = ROOT / "config" / "overlay-rules.yaml"
-    if rp.exists():
-        for line in rp.read_text(encoding="utf-8").splitlines():
-            if line.strip().startswith("max_active_per_lane:"):
-                rules["max"] = int(line.split(":", 1)[1].split("#")[0].strip())
-    applied, skipped = [], {}
-    for p in sorted(d.glob("L-*.md")):
-        lid = p.stem
-        front, led = read_front(p), read_ledger(p.stem)
-        if led is None:
-            skipped[lid] = "no ledger entry"
-            continue
-        if led.get("status", "active") != "active":
-            skipped[lid] = f"ledger status is {led.get('status')}"
-            continue
-        exp = front.get("expires", "")
-        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", exp) and exp < datetime.now(timezone.utc).date().isoformat():
-            skipped[lid] = f"expired on {exp}"
-            continue
-        kinds = [x.strip() for x in front.get("applies_to", "").strip("[]").split(",") if x.strip()] or [led.get("kind", kind)]
-        if "all" not in kinds and kind not in kinds:
-            skipped[lid] = f"evidence is from {'/'.join(kinds)}, this is a {kind}"
-            continue
-        if len(applied) >= rules.get("max", 3):
-            skipped[lid] = "over the per-lane limit"
-            continue
-        applied.append(lid)
-    return applied, skipped
-
-
-def record_active_on(ids, ticket):
-    """Add this ticket to active_on of each applied candidate's ledger entry."""
-    for lid in ids:
-        p = ROOT / "ledger" / f"{lid}.yaml"
-        text = p.read_text(encoding="utf-8")
-        m = re.search(r"^active_on:\s*\[(.*?)\]", text, re.M)
-        if not m:
-            continue
-        have = [x.strip() for x in m.group(1).split(",") if x.strip()]
-        if ticket not in have:
-            have.append(ticket)
-            p.write_text(text[:m.start()] + f"active_on: [{', '.join(have)}]" + text[m.end():], encoding="utf-8", newline="\n")
-
-
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--ticket", required=True)
     ap.add_argument("--run", type=int, default=1)
     ap.add_argument("--lane", required=True, choices=LANES)
-    ap.add_argument("--repo", default="", help="for the dev lane: the repo this instance works in")
+    ap.add_argument("--repo", default="", help="for the dev lane: the repo this instance works on")
     ap.add_argument("--attempt", type=int, default=1)
-    ap.add_argument("--team", default="", help="optional workflow.team attribute")
-    ap.add_argument("--exporter", choices=("file", "otlp-http"), default="file")
-    ap.add_argument("--endpoint", default="http://localhost:14318", help="used with --exporter otlp-http")
-    ap.add_argument("--stay-in-root", action="store_true",
-                    help="do not start the command inside the repo (the lane agent is found from the workflow root)")
-    ap.add_argument("--print-env", action="store_true", help="print the environment and exit")
     ap.add_argument("command", nargs=argparse.REMAINDER, help="command to run, after --")
     args = ap.parse_args()
 
     run_dir = ROOT / "tickets" / args.ticket / f"run-{args.run}"
     if not run_dir.is_dir():
         sys.exit(f"error: {run_dir} not found; create it with scripts/new_ticket.py")
-    events = run_dir / "events.log"
     kind = read_kind(run_dir / "manifest.yaml")
     if kind not in KIND_LANES:
         sys.exit(f"error: unknown kind {kind!r} in manifest")
     if args.lane not in KIND_LANES[kind]:
         sys.exit(f"error: lane {args.lane!r} does not apply to a {kind} (allowed: {', '.join(KIND_LANES[kind])})")
-
     cmd = args.command[1:] if args.command[:1] == ["--"] else args.command
-    launch_id = uuid.uuid4().hex[:12]
-    overlay, overlay_skipped = active_overlay(args.lane, kind)
-
-    registry = read_registry(ROOT / "config" / "repos.yaml")
-    local = read_registry(ROOT / "config" / "repos.local.yaml")
-    paths = {}
-    for name in registry:
-        found = resolve_repo(name, local)
-        if found is not None:
-            paths[name] = found
-    repo_cwd = None
-    if args.repo and registry:
-        if args.repo not in registry:
-            sys.exit(f"error: repo {args.repo!r} is not in config/repos.yaml (known: {', '.join(registry)})")
-        repo_cwd = paths.get(args.repo)
-        if repo_cwd is None:
-            sys.exit(f"error: no local path found for {args.repo!r}. Set it in config/repos.local.yaml "
-                     f"or put the repo at $WF_REPOS_ROOT/{args.repo}")
-    elif args.repo:
-        print("note: config/repos.yaml has no repos; running in the current directory", file=sys.stderr)
-
-    attrs = {
-        "workflow.ticket": args.ticket,
-        "workflow.kind": kind,
-        "workflow.run": args.run,
-        "workflow.lane": args.lane,
-        "workflow.attempt": args.attempt,
-        "workflow.launch_id": launch_id,
-    }
-    if args.repo:
-        attrs["workflow.repo"] = args.repo
-    if args.team:
-        attrs["workflow.team"] = args.team
-    if overlay:
-        attrs["workflow.overlay"] = "+".join(overlay)
-    ours = ",".join(f"{k}={clean(v)}" for k, v in attrs.items())
-    existing = os.environ.get("OTEL_RESOURCE_ATTRIBUTES", "")
-
-    env = {
-        "COPILOT_OTEL_ENABLED": "true",
-        "COPILOT_OTEL_EXPORTER_TYPE": args.exporter,
-        "OTEL_RESOURCE_ATTRIBUTES": f"{existing},{ours}" if existing else ours,
-    }
-    env["WF_REPO_PATHS"] = json.dumps({k: str(v) for k, v in paths.items()})
-    if args.repo:
-        env["WF_REPO"] = args.repo
-        if repo_cwd is not None:
-            env["WF_REPO_PATH"] = str(repo_cwd)
-    dump = None
-    if args.exporter == "file":
-        name = "-".join(p for p in (args.lane, args.repo) if p) + f"-a{args.attempt}-{launch_id}.jsonl"
-        dump = ROOT / "otel-dump" / args.ticket / f"run-{args.run}" / name
-        dump.parent.mkdir(parents=True, exist_ok=True)
-        env["COPILOT_OTEL_FILE_EXPORTER_PATH"] = str(dump)
-    else:
-        env["OTEL_EXPORTER_OTLP_ENDPOINT"] = args.endpoint
-
-    if args.print_env or not cmd:
-        for k, v in env.items():
-            print(f"{k}={v}")
-        print(f"# launch_id={launch_id} (not recorded: nothing was launched)")
-        return
-
+    if not cmd:
+        sys.exit("error: no command given after --")
     exe = shutil.which(cmd[0])
     if exe is None:
         sys.exit(f"error: command not found: {cmd[0]}")
 
-    log_event(events, "launcher", "lane_started", {
-        "launch_id": launch_id, "kind": kind, "lane": args.lane, "repo": args.repo, "attempt": args.attempt,
-        "overlay": overlay, "overlay_skipped": overlay_skipped, "exporter": args.exporter,
-        "dump": dump.relative_to(ROOT).as_posix() if dump else None, "command": Path(cmd[0]).name,
-    })
-    record_active_on(overlay, args.ticket)
-    started = time.time()
-    code = 1
+    registry = read_registry(ROOT / "config" / "repos.yaml")
+    local = read_registry(ROOT / "config" / "repos.local.yaml")
+    paths = {n: found for n in registry if (found := resolve_repo(n, local)) is not None}
+    env = {"WF_TICKET": args.ticket, "WF_RUN": str(args.run), "WF_LANE": args.lane, "WF_ATTEMPT": str(args.attempt),
+           "WF_REPO_PATHS": json.dumps({k: str(v) for k, v in paths.items()})}
+    if args.repo:
+        env["WF_REPO"] = args.repo
+        if args.repo in paths:
+            env["WF_REPO_PATH"] = str(paths[args.repo])
+
+    events = run_dir / "events.log"
+    log_event(events, "launcher", "lane_started", {"kind": kind, "lane": args.lane, "repo": args.repo, "attempt": args.attempt})
+    started, code = time.time(), 1
     try:
-        code = subprocess.call([exe] + cmd[1:], env={**os.environ, **env},
-                               cwd=str(repo_cwd) if (repo_cwd is not None and not args.stay_in_root) else None)
+        code = subprocess.call([exe] + cmd[1:], env={**os.environ, **env})
     except KeyboardInterrupt:
         code = 130
     finally:
-        log_event(events, "launcher", "lane_exited", {
-            "launch_id": launch_id, "returncode": code, "seconds": round(time.time() - started, 1),
-        })
+        log_event(events, "launcher", "lane_exited", {"lane": args.lane, "repo": args.repo, "returncode": code,
+                                                      "seconds": round(time.time() - started, 1)})
     sys.exit(code)
 
 

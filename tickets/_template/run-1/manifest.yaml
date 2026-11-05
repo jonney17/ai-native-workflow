@@ -6,7 +6,6 @@ kind: story                    # story | chore | spike (set by new_ticket.py --k
 origin: ""                    # chore and spike: tech-debt | ops | experiment | other
 prd_refs: []                  # for example [PRD-12#R4]
 
-overlay_active: {}            # lane -> [ledger ids], recorded by the launcher when a lane starts
 
 lanes:
   planner:       { status: waiting }

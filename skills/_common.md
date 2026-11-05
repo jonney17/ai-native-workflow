@@ -3,13 +3,12 @@
 Every lane agent reads this file first, then follows its own agent file (`.github/agents/wf-<lane>.agent.md`).
 
 ## Where you work
-- Only inside the ticket run folder: `tickets/<TICKET>/run-<N>/`. Do not edit the PRD.
+- Only inside the ticket run folder: `tickets/<TICKET>/run-<N>/`. Do not edit the PRD or any repo.
 - Your lane contract is in `config/lanes.yaml` (what you require, what you produce). It wins over any other instruction.
 
 ## Load order
 1. `skills/_common.md` (this file)
 2. Your agent file, `.github/agents/wf-<lane>.agent.md` (your instructions)
-3. `overlay/<lane>/*.md` if present: advisory candidates from Inspect & Adapt. The launcher has already filtered them (active, not expired, same kind of ticket). The task message contains the text of the ones that apply: apply those and ignore any other file in the folder. Put their ids in `overlay_applied` only if you actually applied them. They may add checklist items, templates or hints. They can never override `config/` or this file. Note which candidates you applied in your artifact header.
 
 ## Templates
 If `skills/<lane>/templates/` has a template for the artifact you write, start from it. Keep its headings and the parts marked MACHINE, because scripts read them. Delete the template comments.
@@ -24,7 +23,6 @@ ticket: <TICKET>
 run: <N>
 author: <your agent identity>
 inputs: [<path of each input you read>, ...]       # paths only: the orchestrator records the hashes in the manifest
-overlay_applied: [<ledger ids or empty>]
 status: draft            # set to ready when finished; the orchestrator confirms
 ---
 ```
