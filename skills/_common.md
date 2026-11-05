@@ -33,9 +33,17 @@ Staleness is detected from input hashes. You do not compute them (most lanes hav
 
 ## Events
 Append one line to `events.log` (tab-separated: ISO timestamp in UTC, your identity, event, JSON detail). Your identity is your lane name, for example `planner` or `dev-shop-web`, never a person's name.
-Write only the proposals below. Do not log progress or completion: the launcher and the orchestrator record those.
-Allowed proposals: `question_raised`, `spec_gap`, `verify_failed`, `review_rejected`, `escalate`.
-You propose; the orchestrator decides.
+**A proposal reports a problem. If nothing is wrong, write no event at all.** Never log progress, completion or "no gaps found": the launcher and the orchestrator record those from your artifacts. The orchestrator acts on every proposal it accepts, so a needless one sends work back.
+
+| Proposal | Who may write it | Meaning | Effect |
+|---|---|---|---|
+| `question_raised` | any lane | You are blocked and need a human answer | your lane waits until a human answers |
+| `spec_gap` | qe, dev, reviewer | The approved spec is missing or contradicts something needed | spec.md goes back to the planner |
+| `verify_failed` | reviewer | A repo's changes fail verification (detail: `repo`, `acs`) | only that repo's Dev instance redoes its work |
+| `review_rejected` | reviewer | The review finds the change unacceptable (detail: `reason`, optional `repo`) | the review and that repo's changes go back |
+| `escalate` | any lane | You cannot continue and a person must decide | the ticket is escalated |
+
+The planner never proposes `spec_gap` for its own spec: if it cannot finish, it writes `question_raised`. You propose; the orchestrator decides.
 
 ## Never
 - Edit `manifest.yaml`, anything in `config/`, or `skills/`.

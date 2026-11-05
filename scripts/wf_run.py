@@ -105,6 +105,13 @@ def launchable(res, lane, run, max_attempts):
 
 # ---------------------------------------------------------------- after a session ends
 
+ALLOWED_FROM = {   # which lanes may raise each proposal (see skills/_common.md)
+    "spec_gap": ("qe", "dev", "reviewer"),
+    "verify_failed": ("reviewer",),
+    "review_rejected": ("reviewer",),
+}
+
+
 def apply_proposals(run, who):
     """Apply pending agent proposals exactly once. Any worker may do it; the log says which ones are done."""
     events = run.events()
@@ -119,7 +126,11 @@ def apply_proposals(run, who):
         d = e["detail"]
         name = e["event"]
         lane = d.get("lane") or next((l for l in ("planner", "qe", "dev", "reviewer", "inspect-adapt") if l in e["actor"]), None)
-        if lane == "inspect-adapt":
+        if name in ALLOWED_FROM and lane not in ALLOWED_FROM[name]:
+            run.event("orchestrator", "proposal_ignored", {"id": pid, "event": name, "from": lane or e["actor"],
+                                                           "why": f"{name} may only come from {', '.join(ALLOWED_FROM[name])}"})
+            say(who, f"ignored {name} from {lane or e['actor']}: only {', '.join(ALLOWED_FROM[name])} may raise it")
+        elif lane == "inspect-adapt":
             run.event("orchestrator", "proposal_ignored", {"id": pid, "event": name, "why": "Inspect & Adapt never blocks or reworks a ticket; its observations go in the report"})
             say(who, f"ignored {name} from inspect-adapt (it never blocks a ticket)")
         elif name == "spec_gap" and "spec.md" not in (run.load().get("artifacts") or {}):
