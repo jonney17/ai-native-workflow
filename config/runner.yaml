@@ -10,6 +10,7 @@ idle_exit_minutes: 120     # a worker that has not started anything for this lon
 mode: acp          # (--trust-folder is rejected together with --acp)
 
 acp:
+  idle_seconds: 300          # no output at all for this long = the session is hung: stop it and retry the lane (0 = never)
   command:
     - copilot
     - --acp

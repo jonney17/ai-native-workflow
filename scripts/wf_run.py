@@ -138,6 +138,7 @@ def acp_turn(run, runner, lane, repo, unit, attempt, log, who, verbose):
                 if repo:
                     env["WF_REPO"] = repo
                 sess = sessions[unit] = A.Session(acp_cmd(runner, fmt, repo), ROOT, env, lf, echo)
+                sess.idle_seconds = int((runner.get("acp") or {}).get("idle_seconds") or 0)
                 text = prompt
             seen[unit] = len(given)
             run.event("launcher", "lane_started", {"lane": lane, "repo": repo, "attempt": attempt, "mode": "acp"})

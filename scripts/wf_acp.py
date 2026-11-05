@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import tempfile
 import threading
+import time
 
 
 class AcpError(RuntimeError):
@@ -23,6 +24,8 @@ class Session:
         if exe is None:
             raise AcpError(f"command not found: {cmd[0]}")
         self.cwd, self.log, self.echo = str(cwd), log, echo
+        self.idle_seconds = 0    # a turn with no output at all for this long is treated as hung (0 = wait forever)
+        self._last = time.time()
         self.on_chunk = None     # function(text) called for each piece of the agent's message as it streams
         self._err = tempfile.TemporaryFile("w+", encoding="utf-8", errors="replace")
         self.cmdline = " ".join([exe] + list(cmd[1:]))
@@ -67,6 +70,9 @@ class Session:
         while not ev.wait(1.0):
             if self.proc.poll() is not None and not ev.is_set():
                 raise AcpError("the agent process ended")
+            if method == "session/prompt" and self.idle_seconds and time.time() - self._last > self.idle_seconds:
+                self.proc.kill()
+                raise AcpError(f"no output from the agent for {self.idle_seconds} s; stopped it so the lane can be retried")
         return self._wait.pop(i)[1] or {}
 
     def _raw(self, text):
@@ -87,6 +93,7 @@ class Session:
 
     def _read(self):
         for line in self.proc.stdout:
+            self._last = time.time()
             try:
                 m = json.loads(line)
             except ValueError:
@@ -133,6 +140,7 @@ class Session:
     def prompt(self, text):
         """Send one turn and wait for it to end. Returns (stop_reason, the agent's last message)."""
         self._chunks = []
+        self._last = time.time()
         self._say(f"\n>>> {' '.join(text.split())[:220]}\n")
         r = self._call("session/prompt", {"sessionId": self.sid, "prompt": [{"type": "text", "text": text}]})
         msg = "".join(self._chunks).strip()
