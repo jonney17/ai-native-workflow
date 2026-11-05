@@ -204,6 +204,18 @@ class Run:
                    if e["event"] == "lane_finished" and e["detail"].get("lane") == lane
                    and (e["detail"].get("repo") or "") == (repo or ""))
 
+    def budget_used(self, lane, repo=""):
+        """Finished sessions of this lane instance since the last human reset (wf_run.py retry)."""
+        used = 0
+        for e in self.events():
+            d = e["detail"]
+            if (d.get("lane") == lane and (d.get("repo") or "") == (repo or "")):
+                if e["event"] == "lane_finished":
+                    used += 1
+                elif e["event"] == "attempts_reset":
+                    used = 0
+        return used
+
     def last_outcome(self, lane, repo=""):
         """Outcome of the most recent finished session of this lane instance: ok | incomplete | crashed | None."""
         out = None

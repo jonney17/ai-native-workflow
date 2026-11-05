@@ -12,6 +12,7 @@ Commands (run from the project root):
   ready    --ticket T [--artifact ticket-context.md]           intake: mark the ticket context ready
   approve  --ticket T [--gate planner|reviewer] [--by NAME]    human gate: approve and move on
   reject   --ticket T --gate planner|reviewer --reason TEXT    human gate: send the work back
+  retry    --ticket T --lane L [--repo R]                      give a failed lane a fresh attempt budget and run it again
   answer   --ticket T --lane L [--text TEXT]                   unblock a lane after a question_raised
   enable   --ticket T --lane L                                 turn on a lane that is off by default (Inspect & Adapt on a spike)
   accept   --ticket T [--by NAME]                              human: the ticket is accepted
@@ -64,6 +65,13 @@ def load_cfg(name, default=None):
 # ---------------------------------------------------------------- what to launch
 
 def agent_command(runner, run, lane, repo, attempt):
+    repo_path = ""
+    if repo:
+        reg, loc = L.read_registry(ROOT / "config" / "repos.yaml"), L.read_registry(ROOT / "config" / "repos.local.yaml")
+        found = L.resolve_repo(repo, loc) if repo in reg else None
+        if found is None:
+            sys.exit(f"error: no local path for repo {repo!r}. Set it in config/repos.local.yaml")
+        repo_path = str(found)
     ids, _ = L.active_overlay(lane, str(run.load().get("kind") or "story"))
     if ids:
         parts = []
@@ -77,7 +85,9 @@ def agent_command(runner, run, lane, repo, attempt):
         overlay_line = "\n  overlay candidates to apply: none"
     fmt = {"overlay_line": overlay_line, "lane": lane, "repo": repo, "ticket": run.ticket, "run": run.run, "attempt": attempt,
            "root": str(ROOT), "run_dir": str(run.dir), "repo_phrase": f" for repo {repo}" if repo else "",
-           "repo_line": f"\n  repo: {repo} (your working directory)" if repo else ""}
+           "repo_line": (f"\n  repo: {repo}, at {repo_path}. Your working directory is the workflow root; work in the repo by "
+                         f"absolute path and use `git -C {repo_path}`.") if repo else "",
+           "repo_path": repo_path}
     prompt = str(runner.get("prompt", "")).format(**fmt)
     fmt2 = dict(fmt, prompt=prompt, repo="-" + repo if repo else "")
     override = os.environ.get("WF_AGENT_CMD")
@@ -85,6 +95,8 @@ def agent_command(runner, run, lane, repo, attempt):
     if not base:
         sys.exit("error: no agent command. Set agent.command in config/runner.yaml or WF_AGENT_CMD")
     extra = list(((runner.get("agent") or {}).get("by_lane") or {}).get(lane) or [])
+    if repo:
+        extra += list((runner.get("agent") or {}).get("repo_args") or [])
     return [str(x).format(**fmt2) for x in base + extra]
 
 
@@ -204,15 +216,15 @@ def run_unit(run, cfg, kind, runner, budgets, lane, repo, who, verbose):
     unit = f"{lane}-{repo}" if repo else lane
     attempt = run.attempts_done(lane, repo) + 1
     max_attempts = int((budgets.get("per_lane") or {}).get("max_attempts", 3))
-    if attempt > max_attempts:
-        run.set_lane(lane, "failed")
+    if run.budget_used(lane, repo) >= max_attempts:
+        run.set_lane(lane, "failed", repo or None)
         run.event("orchestrator", "lane_failed", {"lane": lane, "repo": repo, "reason": f"more than {max_attempts} attempts"})
         say(who, f"{unit}: gave up after {max_attempts} attempts; escalating")
         run.release(unit)
         return
     cmd = agent_command(runner, run, lane, repo, attempt)
     launch = [PY, str(HERE / "wf_launch.py"), "--ticket", run.ticket, "--run", str(run.run), "--lane", lane,
-              "--attempt", str(attempt)] + (["--repo", repo] if repo else []) + ["--"] + cmd
+              "--attempt", str(attempt), "--stay-in-root"] + (["--repo", repo] if repo else []) + ["--"] + cmd
     logdir = run.dir / "logs"
     logdir.mkdir(exist_ok=True)
     log = logdir / f"{unit}-a{attempt}.log"
@@ -421,7 +433,7 @@ def do_accept(run, by):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("command", choices=["start", "worker", "command", "ready", "approve", "reject", "answer", "enable", "accept", "deployed", "status"])
+    ap.add_argument("command", choices=["start", "worker", "command", "ready", "approve", "reject", "answer", "retry", "enable", "accept", "deployed", "status"])
     ap.add_argument("--ticket", required=True)
     ap.add_argument("--run", type=int, default=None)
     ap.add_argument("--lane", default="")
@@ -482,6 +494,22 @@ def main():
         run.event(args.by, "question_answered", {"lane": args.lane, "text": args.text})
         run.decide(f"{args.by} answered the {args.lane} question: {args.text or '(see events.log)'}")
         print(f"{args.lane} unblocked")
+    elif args.command == "retry":
+        if not args.lane:
+            sys.exit("error: --lane is required")
+        def fn(m):
+            ent = m.setdefault("lanes", {}).setdefault(args.lane, {})
+            if args.lane == "dev":
+                for r in list(ent.get("repos") or {}):
+                    if not args.repo or r == args.repo:
+                        ent["repos"][r] = "waiting"
+                ent["status"] = "waiting"
+            else:
+                ent["status"] = "waiting"
+        run.update(fn)
+        run.event(args.by, "attempts_reset", {"lane": args.lane, "repo": args.repo})
+        run.decide(f"{args.by} gave {args.lane}{' ' + args.repo if args.repo else ''} a fresh attempt budget.")
+        print(f"{args.lane}{' ' + args.repo if args.repo else ''} will run again; start the workers: python scripts/wf_run.py start --ticket {args.ticket}")
     elif args.command == "enable":
         if not args.lane:
             sys.exit("error: --lane is required")

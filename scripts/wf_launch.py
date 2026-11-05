@@ -179,6 +179,8 @@ def main():
     ap.add_argument("--team", default="", help="optional workflow.team attribute")
     ap.add_argument("--exporter", choices=("file", "otlp-http"), default="file")
     ap.add_argument("--endpoint", default="http://localhost:14318", help="used with --exporter otlp-http")
+    ap.add_argument("--stay-in-root", action="store_true",
+                    help="do not start the command inside the repo (the lane agent is found from the workflow root)")
     ap.add_argument("--print-env", action="store_true", help="print the environment and exit")
     ap.add_argument("command", nargs=argparse.REMAINDER, help="command to run, after --")
     args = ap.parse_args()
@@ -271,7 +273,7 @@ def main():
     code = 1
     try:
         code = subprocess.call([exe] + cmd[1:], env={**os.environ, **env},
-                               cwd=str(repo_cwd) if repo_cwd is not None else None)
+                               cwd=str(repo_cwd) if (repo_cwd is not None and not args.stay_in_root) else None)
     except KeyboardInterrupt:
         code = 130
     finally:

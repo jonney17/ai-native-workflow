@@ -33,6 +33,11 @@ agent:
   #   planner: [--deny-tool, shell]
   # A per-lane credit cap is available too: [--max-ai-credits, "20"]
   by_lane: {}
+  # Added for a lane instance that works in a repo (Dev). The session starts in the workflow root, where the lane
+  # agents are found, and is allowed into the repo with --add-dir.
+  repo_args:
+    - --add-dir
+    - "{repo_path}"
 
 prompt: |
   Do your lane's work for this work item.

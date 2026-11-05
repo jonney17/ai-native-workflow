@@ -27,7 +27,7 @@ Build the change for your repo only.
 `changes/<repo>/` containing `diff.patch`, `notes.md`, `local-verify.md`.
 
 ## Steps
-1. Read only your repo's section of `tasks.md`, plus the spec and design. Your repo is the working directory (`WF_REPO_PATH`).
+1. Read only your repo's section of `tasks.md`, plus the spec and design. Your repo's path is in the task message (`repo: <name>, at <path>`). Your working directory is the workflow root, not the repo: edit the repo by absolute path and run git as `git -C <path> ...`.
 2. Implement on a branch named `wf/<TICKET>-run<N>`. Follow the repo's own conventions and existing tests.
 3. Run the repo's build and existing tests locally. Record the commands and results in `local-verify.md`.
 4. Write `notes.md`: what changed and why, files touched, changed line count, and risk signals (API contract, schema, auth, CI or dependency changes). The Reviewer uses these against `config/risk-rules.yaml`.
