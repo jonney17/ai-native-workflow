@@ -21,6 +21,16 @@ python scripts/wf_run.py start --ticket PROJ-1 --verbose       # the one trigger
 
 It ends when the ticket is Done or Escalated. Agent output is saved in `logs/` of the run folder.
 
+## A simple UI
+
+```
+python scripts/wf_ui.py          # opens http://127.0.0.1:8765 (this computer only, no extra packages)
+```
+
+Pick a ticket, press **Start workers**, and watch each lane. For every lane you can read its last agent log and its
+artifacts, answer its question (the answer goes into the lane's next task message), retry it after it gave up, and
+approve or reject at the gates. It runs the same commands as below; use either.
+
 ## What people do
 
 | When | Command |
