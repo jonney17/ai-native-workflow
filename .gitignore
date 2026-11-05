@@ -4,4 +4,4 @@ otel-dump/*
 __pycache__/
 *.pyc
 config/repos.local.yaml
-demo/workspace/
+demo/workspace*/
