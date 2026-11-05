@@ -128,9 +128,9 @@ def launchable(res, lane, run, max_attempts):
     units = []
     if lane == "dev":
         for repo, x in rec["repos"].items():
-            if x["state"] in ("ready", "stale") or (x["state"] == "working" and run.last_outcome(lane, repo) in ("incomplete", "crashed")):
+            if x["state"] in ("ready", "stale") or (x["state"] == "working" and run.last_outcome(lane, repo) in ("incomplete", "crashed", "blocked")):
                 units.append(repo)
-    elif rec["state"] in ("ready", "stale") or (rec["state"] == "working" and run.last_outcome(lane, "") in ("incomplete", "crashed")):
+    elif rec["state"] in ("ready", "stale") or (rec["state"] == "working" and run.last_outcome(lane, "") in ("incomplete", "crashed", "blocked")):
         units.append("")
     return units
 
