@@ -303,8 +303,10 @@ def run_unit(run, cfg, kind, runner, budgets, lane, repo, who, verbose):
     stamp = time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(started - 1))
     if msg and rc == 0 and len(marked) < len(expected) and not any(
             e["event"] in S.PROPOSALS and e["actor"] in (unit, lane) and e["time"] >= stamp for e in run.events()[-50:]):
-        # the agent stopped without finishing and without raising an event: what it said is its question
-        run.event(unit, "question_raised", {"lane": lane, "repo": repo, "question": msg[:1500]})
+        if "?" in msg[-600:]:   # it stopped without finishing and asked something: that is its question
+            run.event(unit, "question_raised", {"lane": lane, "repo": repo, "question": msg.strip()[-1500:]})
+        else:                   # it just stopped: not a question; the attempt counts as incomplete and is retried
+            say(who, f"{unit}: stopped without its artifacts and without a question: {' '.join(msg.split())[:200]}")
     apply_proposals(run, who)
     if lane == "reviewer":
         copy_review_decision(run, who)

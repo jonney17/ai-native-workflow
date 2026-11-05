@@ -19,6 +19,7 @@ acp:
     - --allow-all-tools
     - --excluded-tools
     - skill
+    - shell             # placeholder lanes need no shell; remove this line when a lane's real task does
     - --add-dir
     - "{root}"
     - --deny-tool
@@ -54,17 +55,18 @@ agent:
     - "{repo_path}"
 
 prompt: |
-  Do your lane's work for this work item.
+  You are the {lane} lane. Read .github/agents/wf-{lane}.agent.md first and follow it exactly. Do only that lane's work.
+  Work item:
   root: {root}
   run_dir: {run_dir}
   ticket: {ticket}, run: {run}, attempt: {attempt}{repo_line}{extra_line}
-  Follow your agent instructions. They say what to read and what to write.
+  Your agent file says what to read and what to write.
 
 adhoc_prompt: |
   This is a chat with a person outside any ticket, not a ticket run. You are the {lane} lane.
   root: {root}
   task_dir: {task_dir}
-  Read skills/_common.md (section "Ad-hoc chat") and your agent file. Answer in your messages. Put any file you produce in task_dir.
+  Read .github/agents/wf-{lane}.agent.md and skills/_common.md (section "Ad-hoc chat"). Answer in your messages. Put any file you produce in task_dir.
 
 deploy:
   # CI/CD stand-in, run once per repo in the Release order after the review passes.

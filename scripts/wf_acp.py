@@ -97,13 +97,14 @@ class Session:
                 u = (m.get("params") or {}).get("update") or {}
                 kind, c = u.get("sessionUpdate", ""), u.get("content")
                 if kind == "agent_message_chunk" and isinstance(c, dict):
-                    self._chunks.append(c.get("text", ""))
-                    if self.log:
-                        self.log.write(c.get("text", ""))
-                        self.log.flush()
+                    text = c.get("text", "")
+                    if text.startswith("Info: "):                    # a notice from the CLI, not the agent's words
+                        self._raw("\n" + text.strip() + "\n")
+                        continue
+                    self._chunks.append(text)
                     if self.on_chunk:
-                        self.on_chunk(c.get("text", ""))
-                    self._raw(c.get("text", ""))                     # live: the log fills as the agent speaks
+                        self.on_chunk(text)
+                    self._raw(text)                                  # live: the log fills as the agent speaks
                 elif kind == "tool_call":
                     self._say(f"[tool] {u.get('title', '')}\n")
             elif m.get("id") in self._wait:
