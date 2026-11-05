@@ -64,6 +64,19 @@ def load_cfg(name, default=None):
 
 # ---------------------------------------------------------------- what to launch
 
+# --smoke: real agents, trivial work. Proves the hand-offs (artifacts, hashes, gates, events) without real engineering.
+SMOKE = {
+    "*": "\n  SMOKE TEST: do NOT do the real work. Do not change any repo, run no tests. Keep every artifact body to a few lines. "
+         "Still write the artifact header exactly as _common.md says. Say in one line what you would have done.",
+    "dev": "\n  SMOKE TEST: do NOT do the real work. Do not edit or commit anything in the repo. Write only "
+           "artifacts/changes/{repo}/summary.md and artifacts/changes/{repo}/notes.md (header per _common.md, inputs "
+           "[spec.md, design.md, tasks.md], body: one line naming what you would have changed). Write no events.",
+    "reviewer": "\n  SMOKE TEST: do NOT run tests or read diffs. Write artifacts/verify-report.md (header, inputs [test-plan.md, changes], "
+                "line 'Result: **PASS**', one-line coverage table) and artifacts/review-report.md (header, then the two MACHINE lines "
+                "'human_required: false' and 'signals: []', then 'Verdict: pass' and one line of review). Write no events.",
+}
+
+
 def agent_command(runner, run, lane, repo, attempt):
     repo_path = ""
     if repo:
@@ -89,6 +102,8 @@ def agent_command(runner, run, lane, repo, attempt):
                          f"absolute path and use `git -C {repo_path}`.") if repo else "",
            "repo_path": repo_path}
     prompt = str(runner.get("prompt", "")).format(**fmt)
+    if os.environ.get("WF_SMOKE"):
+        prompt += SMOKE.get(lane, SMOKE["*"]).format(**fmt)
     fmt2 = dict(fmt, prompt=prompt, repo="-" + repo if repo else "")
     override = os.environ.get("WF_AGENT_CMD")
     base = json.loads(override) if override else list((runner.get("agent") or {}).get("command") or [])
@@ -325,6 +340,8 @@ def ci_worker(args):
     run = W.Run(args.ticket, args.run)
     runner = load_cfg("runner.yaml")
     cmd_t = json.loads(os.environ["WF_DEPLOY_CMD"]) if os.environ.get("WF_DEPLOY_CMD") else (runner.get("deploy") or {}).get("command")
+    if os.environ.get("WF_SMOKE") and not cmd_t:
+        cmd_t = [PY, "-c", "print('smoke deploy of {repo}')"]
     poll = float(runner.get("poll_seconds", 5))
     who, said = "ci", None
     while True:
@@ -445,6 +462,7 @@ def main():
     ap.add_argument("--text", default="")
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--auto-approve", action="store_true", help="play the human at every gate (testing only)")
+    ap.add_argument("--smoke", action="store_true", help="real agents, trivial work, no repo changes; fake deploy (flow test)")
     ap.add_argument("--verbose", action="store_true", help="show the agent's output as it runs")
     args = ap.parse_args()
     if args.run is None:
@@ -533,6 +551,9 @@ def main():
 
 
 def start(args, run):
+    if args.smoke:
+        os.environ["WF_SMOKE"] = "1"
+        print("SMOKE mode: agents are told to skip the real work; deploys are fake.")
     res = S.analyze(args.ticket, args.run)
     kind = res["kind"]
     lanes = [l for l, r in res["lanes"].items() if r["state"] != "disabled"]

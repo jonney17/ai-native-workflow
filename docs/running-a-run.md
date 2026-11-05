@@ -72,3 +72,9 @@ python demo/demo.py auto --gates-by-hand    # same, but you approve at the gates
 - it is within `limits.max_active_per_lane` in `config/overlay-rules.yaml`.
 
 Skipped candidates and the reason are recorded in the `lane_started` event (`overlay_skipped`). Applied ones are tagged on the telemetry (`workflow.overlay`), added to the ledger entry's `active_on`, and named in the task message, so the agent reads only those. To remove a candidate, set its ledger status to `rejected` (or delete the file).
+
+## Smoke mode (flow test with real agents)
+`wf_run.py start --ticket T --smoke` launches the real lane agents but tells them to skip the real work: Dev writes only
+`changes/<repo>/summary.md` and `notes.md`, the Reviewer writes a passing verify and review report, nothing in the repos is
+touched, and the CI stand-in fakes the deploy. Use it to prove hand-offs, hashes, gates and events quickly. If an agent
+skips the artifact header or the MACHINE lines, that is a finding about the flow, not about the code.
