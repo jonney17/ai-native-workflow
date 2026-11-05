@@ -7,7 +7,7 @@ idle_exit_minutes: 120     # a worker that has not started anything for this lon
 
 # acp: one long-lived session per lane (copilot --acp). A lane can stop to ask a question and the answer goes into the
 #      same session, so it continues with what it already read. print: one-shot `copilot -p` sessions (agent below).
-mode: acp
+mode: acp          # (--trust-folder is rejected together with --acp)
 
 acp:
   command:
@@ -19,7 +19,6 @@ acp:
     - --allow-all-tools
     - --excluded-tools
     - skill
-    - --trust-folder
     - --add-dir
     - "{root}"
     - --deny-tool
