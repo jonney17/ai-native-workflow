@@ -81,7 +81,7 @@ def _turn_acp(tid, lane, d, text):
             if (d / "result.md").exists() and not (d / "question.md").exists():
                 sessions.pop(tid, None)
                 sess.close()
-        except A.AcpError as e:
+        except Exception as e:  # keep the reason where the page can show it
             lf.write(f"\nERROR: {e}\n")
             sessions.pop(tid, None)
 

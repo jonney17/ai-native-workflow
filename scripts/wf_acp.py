@@ -8,6 +8,7 @@ import json
 import os
 import shutil
 import subprocess
+import tempfile
 import threading
 
 
@@ -22,22 +23,38 @@ class Session:
         if exe is None:
             raise AcpError(f"command not found: {cmd[0]}")
         self.cwd, self.log, self.echo = str(cwd), log, echo
+        self._err = tempfile.TemporaryFile("w+", encoding="utf-8", errors="replace")
+        self.cmdline = " ".join([exe] + list(cmd[1:]))
         self.proc = subprocess.Popen([exe] + list(cmd[1:]), cwd=self.cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                     stderr=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace",
+                                     stderr=self._err, text=True, encoding="utf-8", errors="replace",
                                      env={**os.environ, **(env or {})})
         self._id, self._lock, self._wait = 0, threading.Lock(), {}
         self._chunks = []
         threading.Thread(target=self._read, daemon=True).start()
-        self._call("initialize", {"protocolVersion": 1, "clientCapabilities": {}})
-        r = self._call("session/new", {"cwd": self.cwd, "mcpServers": []})
+        try:
+            self._call("initialize", {"protocolVersion": 1, "clientCapabilities": {}})
+            r = self._call("session/new", {"cwd": self.cwd, "mcpServers": []})
+        except (OSError, AcpError) as e:
+            raise AcpError(f"{e}\ncommand: {self.cmdline}\nstderr: {self.stderr_tail()}") from None
         self.sid = (r.get("result") or {}).get("sessionId")
         if not self.sid:
-            raise AcpError(f"no session: {r}")
+            raise AcpError(f"no session: {r}\ncommand: {self.cmdline}\nstderr: {self.stderr_tail()}")
+
+    def stderr_tail(self):
+        try:
+            self._err.flush()
+            self._err.seek(0)
+            return self._err.read()[-1500:].strip() or "(empty)"
+        except (OSError, ValueError):
+            return "(unreadable)"
 
     # ---- plumbing
     def _send(self, obj):
-        self.proc.stdin.write(json.dumps(obj) + "\n")
-        self.proc.stdin.flush()
+        try:
+            self.proc.stdin.write(json.dumps(obj) + "\n")
+            self.proc.stdin.flush()
+        except OSError:
+            raise AcpError("the agent process ended") from None
 
     def _call(self, method, params):
         with self._lock:

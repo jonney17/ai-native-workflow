@@ -142,7 +142,7 @@ def acp_turn(run, runner, lane, repo, unit, attempt, log, who, verbose):
             seen[unit] = len(given)
             run.event("launcher", "lane_started", {"lane": lane, "repo": repo, "attempt": attempt, "mode": "acp"})
             _, msg = sess.prompt(text)
-        except A.AcpError as e:
+        except Exception as e:
             rc, msg = 1, str(e)
             lf.write(f"\nERROR: {e}\n")
             sessions.pop(unit, None)
