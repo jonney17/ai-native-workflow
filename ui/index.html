@@ -18,12 +18,14 @@ pre{white-space:pre-wrap;word-break:break-word;max-height:150px;overflow:auto;ba
 .q{border-left:3px solid var(--warn);padding:4px 10px;margin:4px 0;white-space:pre-wrap;overflow-wrap:anywhere}
 .send{display:flex;gap:6px}.send input{flex:1;min-width:0}.mut{color:var(--mut)}table{width:100%;border-collapse:collapse}td{padding:7px 6px;border-top:1px solid var(--line);vertical-align:top}
 .box{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px;margin:10px 0}a{color:var(--acc);cursor:pointer}.files a{margin-right:12px}
+.chip{display:inline-block;border:1px solid var(--line);border-radius:12px;padding:1px 8px;margin:2px 4px 2px 0;font-size:12px;cursor:pointer}.chip.sel{background:var(--you)}.draft{color:var(--warn)}.missing{color:var(--mut)}.stale{color:var(--warn)}
 .row2{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0}textarea{width:100%;min-height:54px;margin:4px 0}
 .dl{display:grid;grid-template-columns:120px 1fr;gap:4px 12px}.dl+.dl{border-top:1px solid var(--line);margin-top:8px;padding-top:8px}
 @media(max-width:700px){.lane,.dl{grid-template-columns:1fr}}</style></head><body><main>
 <div class="row2"><h1>Team workflow</h1><span id="msg" class="mut"></span></div>
 <h2>Team</h2><div id="team"></div>
-<h2>Tickets <span class="mut" style="font-weight:400">(fake list; later the Jira board)</span></h2>
+<h2>Tickets and artifacts <span class="mut" style="font-weight:400">(fake list; later the Jira board)</span></h2>
 <div class="box"><table id="tickets"></table><label class="mut"><input type="checkbox" id="auto"> auto-approve the gates (testing only)</label></div>
+<div id="review" class="box" hidden></div>
 <div id="detail"></div>
 </main><script src="app.js"></script></body></html>

@@ -102,7 +102,14 @@ def board():
         except Exception as e:  # a broken ticket must not hide the board
             summaries[t] = {"status": f"error: {e}", "detail": ""}
             continue
-        summaries[t] = {"status": res["status"], "detail": res["detail"]}
+        arts = []
+        for name, a in res["artifacts"].items():
+            if name == "changes":
+                arts += [{"name": f"changes/{r}", "status": x["status"], "reason": x.get("reason")} for r, x in (a.get("repos") or {}).items()]
+            else:
+                arts.append({"name": name, "status": a["status"], "reason": a.get("reason")})
+        gates = [{"gate": g, "state": x["state"], "artifacts": x["artifacts"]} for g, x in (res.get("gates") or {}).items() if x["state"] != "not_required"]
+        summaries[t] = {"status": res["status"], "detail": res["detail"], "artifacts": arts, "gates": gates}
         if res["status"] in ("Done", "Escalated"):
             continue
         for lane, rec in res["lanes"].items():
@@ -133,7 +140,8 @@ def board():
     items = []
     for b in backlog():
         s = summaries.get(b["id"])
-        items.append({"id": b["id"], "title": b["title"], "repos": b.get("repos", []), "state": s["status"] if s else "Not started", "detail": s["detail"] if s else ""})
+        items.append({"id": b["id"], "title": b["title"], "repos": b.get("repos", []), "state": s["status"] if s else "Not started", "detail": s["detail"] if s else "",
+                      "artifacts": s.get("artifacts", []) if s else [], "gates": s.get("gates", []) if s else []})
     return {"lanes": lanes, "tickets": items}
 
 
@@ -143,10 +151,14 @@ def read_file(ticket, rel):
     res = S.analyze(ticket)
     base = (ROOT / res["path"]).resolve()
     p = (base / rel).resolve()
-    if base not in p.parents or not p.is_file():
+    if base not in p.parents:
         return "(not found)"
-    text = p.read_text(encoding="utf-8", errors="replace")
-    return text[-20000:]
+    if p.is_dir():   # a folder such as changes/<repo>: show its files one after another
+        parts = [f"=== {f.relative_to(p).as_posix()} ===\n" + f.read_text(encoding="utf-8", errors="replace") for f in sorted(p.rglob("*")) if f.is_file() and f.name != ".gitkeep"]
+        return "\n\n".join(parts)[-40000:] or "(empty)"
+    if not p.is_file():
+        return "(not found)"
+    return p.read_text(encoding="utf-8", errors="replace")[-40000:]
 
 
 def act(body):

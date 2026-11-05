@@ -69,7 +69,32 @@ function paintBoard() {
   }
   $('tickets').innerHTML = board.tickets.map((t) => `<tr><td><b>${esc(t.id)}</b></td><td>${esc(t.title)}<br><span class="mut">${esc(t.repos.join(', '))}</span></td>
     <td>${esc(t.state)}<br><span class="mut">${esc(t.detail)}</span></td>
+    <td>${t.artifacts.filter((x) => x.status !== 'missing').map((x) => `<span class="chip ${x.status} ${rv.ticket === t.id && rv.name === x.name ? 'sel' : ''}" data-review="${esc(t.id)}" data-name="${esc(x.name)}" title="${esc(x.reason || '')}">${esc(x.name)}: ${esc(x.status)}</span>`).join('') || '<span class="mut">none yet</span>'}</td>
     <td>${t.state === 'Not started' ? `<button class="p" data-start="${esc(t.id)}">Start</button>` : `<button data-open="${esc(t.id)}">Open</button>`}</td></tr>`).join('');
+  paintReview();
+}
+
+// ---------- review an artifact and decide on it
+const rv = { ticket: '', name: '', text: '' };
+function gateOf(t, name) { return t && t.gates.find((g) => g.artifacts.includes(name) && g.state === 'awaiting_approval'); }
+function paintReview() {
+  const box = $('review'); const t = board && board.tickets.find((x) => x.id === rv.ticket);
+  if (!t) { box.hidden = true; return; }
+  const a = t.artifacts.find((x) => x.name === rv.name), g = gateOf(t, rv.name);
+  box.hidden = false;
+  if (document.activeElement && document.activeElement.id === 'rv-reason') return;   // do not wipe what is being typed
+  box.innerHTML = `<div class="row2"><b>${esc(t.id)} / ${esc(rv.name)}</b> <span class="pill ${a ? a.status : ''}">${a ? esc(a.status) : ''}</span>
+    ${a && a.reason ? `<span class="mut">${esc(a.reason)}</span>` : ''}<span style="flex:1"></span><button data-close="1">Close</button></div>
+    ${g ? `<div class="row2"><b>${esc(g.gate)} gate</b> <span class="mut">approves ${g.artifacts.map(esc).join(', ')} together</span>
+      <button class="p" data-cmd="approve" data-ticket="${esc(t.id)}" data-gate="${esc(g.gate)}">Approve</button>
+      <input type="text" id="rv-reason" placeholder="reason to send back" size="28"><button class="d" data-cmd="reject" data-ticket="${esc(t.id)}" data-gate="${esc(g.gate)}" data-text="rv-reason">Reject</button></div>` : ''}
+    ${rv.name === 'ticket-context.md' && a && a.status === 'draft' ? `<button class="p" data-cmd="ready" data-ticket="${esc(t.id)}">Mark ticket context ready</button>` : ''}
+    <pre id="rv-text" style="max-height:420px">${esc(rv.text)}</pre>`;
+}
+async function loadReview() {
+  if (!rv.ticket) return;
+  const text = await api('/api/file?ticket=' + encodeURIComponent(rv.ticket) + '&path=' + encodeURIComponent('artifacts/' + rv.name));
+  if (text !== rv.text) { rv.text = text; paintReview(); }
 }
 
 function paintChats() {
@@ -117,8 +142,10 @@ async function loadDetail(force) {
 }
 
 document.addEventListener('click', async (e) => {
-  const t = e.target.closest('[data-open],[data-start],[data-stop],[data-cmd],[data-file]'); if (!t) return;
+  const t = e.target.closest('[data-open],[data-start],[data-stop],[data-cmd],[data-file],[data-review],[data-close]'); if (!t) return;
   const d = t.dataset;
+  if (d.review) { rv.ticket = d.review; rv.name = d.name; rv.text = '(loading)'; paintReview(); loadReview(); paintBoard(); return; }
+  if (d.close) { rv.ticket = ''; $('review').hidden = true; paintBoard(); return; }
   if (d.open) { cur = d.open; loadDetail(true); $('detail').scrollIntoView({ block: 'nearest' }); }
   else if (d.start) { say((await api('/api/start', { ticket: d.start, auto: $('auto').checked })).message); cur = d.start; loadBoard(); loadDetail(true); }
   else if (d.stop) say((await api('/api/stop', { ticket: d.stop })).message);
@@ -126,9 +153,9 @@ document.addEventListener('click', async (e) => {
     const text = d.text ? $(d.text).value : '';
     say((await api('/api/action', { ticket: d.ticket || cur, cmd: d.cmd, lane: d.cmd === 'answer' || d.cmd === 'retry' ? d.lane : '', repo: d.repo, gate: d.gate, text })).message);
     if (d.text) $(d.text).value = '';
-    loadBoard(); loadDetail(true);
+    loadBoard(); loadDetail(true); loadReview();
   } else if (d.file) { const v = $('view'); v.hidden = false; v.textContent = await api('/api/file?ticket=' + cur + '&path=' + encodeURIComponent(d.file)); }
 });
 
 buildRows(); loadBoard(); loadChats();
-setInterval(loadBoard, 2500); setInterval(loadChats, 1000); setInterval(() => loadDetail(false), 3000);
+setInterval(loadBoard, 2500); setInterval(loadChats, 1000); setInterval(() => loadDetail(false), 3000); setInterval(loadReview, 2500);
