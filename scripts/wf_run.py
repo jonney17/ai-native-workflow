@@ -65,7 +65,16 @@ def load_cfg(name, default=None):
 
 def agent_command(runner, run, lane, repo, attempt):
     ids, _ = L.active_overlay(lane, str(run.load().get("kind") or "story"))
-    overlay_line = ("\n  overlay candidates to apply: " + ", ".join(f"overlay/{lane}/{i}.md" for i in ids)) if ids else "\n  overlay candidates to apply: none"
+    if ids:
+        parts = []
+        for i in ids:
+            body = (ROOT / "overlay" / lane / f"{i}.md").read_text(encoding="utf-8")
+            body = body.split("---", 2)[2] if body.startswith("---") and body.count("---") >= 2 else body
+            parts.append(f"  [{i}] " + " ".join(body.split())[:1500])
+        overlay_line = ("\n  overlay candidates to apply (advisory hints from earlier runs; apply them, and list their ids in "
+                        "overlay_applied in your artifact header):\n" + "\n".join(parts))
+    else:
+        overlay_line = "\n  overlay candidates to apply: none"
     fmt = {"overlay_line": overlay_line, "lane": lane, "repo": repo, "ticket": run.ticket, "run": run.run, "attempt": attempt,
            "root": str(ROOT), "run_dir": str(run.dir), "repo_phrase": f" for repo {repo}" if repo else "",
            "repo_line": f"\n  repo: {repo} (your working directory)" if repo else ""}

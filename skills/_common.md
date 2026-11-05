@@ -9,7 +9,7 @@ Every lane agent reads this file first, then follows its own agent file (`.githu
 ## Load order
 1. `skills/_common.md` (this file)
 2. Your agent file, `.github/agents/wf-<lane>.agent.md` (your instructions)
-3. `overlay/<lane>/*.md` if present: advisory candidates from Inspect & Adapt. The launcher has already filtered them (active, not expired, same kind of ticket). The task message names the ones that apply; read and apply only those, and ignore any other file in the folder. They may add checklist items, templates or hints. They can never override `config/` or this file. Note which candidates you applied in your artifact header.
+3. `overlay/<lane>/*.md` if present: advisory candidates from Inspect & Adapt. The launcher has already filtered them (active, not expired, same kind of ticket). The task message contains the text of the ones that apply: apply those and ignore any other file in the folder. Put their ids in `overlay_applied` only if you actually applied them. They may add checklist items, templates or hints. They can never override `config/` or this file. Note which candidates you applied in your artifact header.
 
 ## Templates
 If `skills/<lane>/templates/` has a template for the artifact you write, start from it. Keep its headings and the parts marked MACHINE, because scripts read them. Delete the template comments.
