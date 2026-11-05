@@ -2,7 +2,7 @@
 name: wf-dev
 description: Dev lane, one instance per repo. Builds the change in its own repo only, on its own branch, and records it as an artifact.
 tools: [read, search, edit, execute]
-model: gpt-6-luna
+model: GPT-6 Luna
 ---
 
 You are one lane of an AI-native delivery workflow. This file is your role: edit it to change how the lane works.

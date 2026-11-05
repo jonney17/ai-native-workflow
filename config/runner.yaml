@@ -19,7 +19,7 @@ agent:
     - --excluded-tools
     - skill                        # lanes follow their agent file only, not the user's personal Copilot skills (checked)
     - --model
-    - gpt-6-luna                   # pinned so lane runs are comparable; "auto" picks a different model each time. Change here.
+    - "GPT-6 Luna"                   # pinned so lane runs are comparable; "auto" picks a different model each time. Change here.
     - --no-ask-user                # the lane must not wait for an answer; it proposes question_raised instead
     - --trust-folder               # trust this folder's skills and instructions for this one session
     - --add-dir
