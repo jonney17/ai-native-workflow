@@ -312,6 +312,11 @@ LEDGER = {
 }
 
 OVERLAY = """\
+---
+ledger: L-2026-11-001
+lane: dev
+expires: end of current sprint
+---
 # L-2026-11-001 (candidate for the Dev lane)
 
 Why: on DEMO-1 the shop-web change passed its own tests but failed verify on null and missing values (one rework loop).

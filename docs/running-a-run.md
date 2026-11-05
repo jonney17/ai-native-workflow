@@ -61,3 +61,14 @@ python demo/demo.py auto --gates-by-hand    # same, but you approve at the gates
 ```
 
 `--auto-approve` on `start` plays the human at every gate. It is for testing the flow only.
+
+## Overlay candidates: which ones a session gets
+
+`wf_launch.py` decides, for each session, which `overlay/<lane>/L-*.md` candidates apply. A candidate applies when:
+
+- its ledger entry (`ledger/<id>.yaml`) exists and has `status: active`,
+- its front matter has no ISO `expires: YYYY-MM-DD` in the past (free text such as `end of current sprint` is not evaluated: the retro closes those by setting the ledger status),
+- the ticket is of the kind the evidence came from (ledger `kind`, or `applies_to: [story, spike]` / `[all]` in the candidate's front matter),
+- it is within `limits.max_active_per_lane` in `config/overlay-rules.yaml`.
+
+Skipped candidates and the reason are recorded in the `lane_started` event (`overlay_skipped`). Applied ones are tagged on the telemetry (`workflow.overlay`), added to the ledger entry's `active_on`, and named in the task message, so the agent reads only those. To remove a candidate, set its ledger status to `rejected` (or delete the file).

@@ -37,7 +37,7 @@ prompt: |
   Do your lane's work for this work item.
   root: {root}
   run_dir: {run_dir}
-  ticket: {ticket}, run: {run}, attempt: {attempt}{repo_line}
+  ticket: {ticket}, run: {run}, attempt: {attempt}{repo_line}{overlay_line}
   Follow your agent instructions. They say what to read and what to write.
 
 deploy:

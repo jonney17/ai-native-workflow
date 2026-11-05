@@ -12,6 +12,7 @@ Usage:
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -88,9 +89,84 @@ def read_kind(manifest):
     return "story"
 
 
-def active_overlay(lane):
+def read_front(path):
+    """Simple front matter of an overlay candidate: key: value lines between the first two --- lines."""
+    out = {}
+    text = path.read_text(encoding="utf-8")
+    if text.startswith("---"):
+        for line in text.split("---", 2)[1].splitlines():
+            if ":" in line:
+                k, v = line.split(":", 1)
+                out[k.strip()] = v.split(" #")[0].strip()
+    return out
+
+
+def read_ledger(ledger_id):
+    """The few ledger fields the launcher needs (status, kind, active_on), read as plain text."""
+    p = ROOT / "ledger" / f"{ledger_id}.yaml"
+    if not p.exists():
+        return None
+    out = {}
+    for line in p.read_text(encoding="utf-8").splitlines():
+        for key in ("status", "kind"):
+            if line.startswith(key + ":"):
+                out[key] = line.split(":", 1)[1].split(" #")[0].strip().strip("\"'")
+    return out
+
+
+def active_overlay(lane, kind):
+    """Candidates to apply to this session. Returns (applied ids, {skipped id: reason}).
+
+    A candidate applies when its ledger entry is active, it has not passed an ISO `expires:` date, and the
+    ticket is of the kind the evidence came from (ledger `kind`, or the candidate's `applies_to:` list).
+    At most limits.max_active_per_lane apply. Free-text expiry such as 'end of current sprint' is not evaluated:
+    the retro closes those by changing the ledger status."""
     d = ROOT / "overlay" / lane
-    return sorted(p.stem for p in d.glob("L-*.md")) if d.is_dir() else []
+    if not d.is_dir():
+        return [], {}
+    rules = {}
+    rp = ROOT / "config" / "overlay-rules.yaml"
+    if rp.exists():
+        for line in rp.read_text(encoding="utf-8").splitlines():
+            if line.strip().startswith("max_active_per_lane:"):
+                rules["max"] = int(line.split(":", 1)[1].split("#")[0].strip())
+    applied, skipped = [], {}
+    for p in sorted(d.glob("L-*.md")):
+        lid = p.stem
+        front, led = read_front(p), read_ledger(p.stem)
+        if led is None:
+            skipped[lid] = "no ledger entry"
+            continue
+        if led.get("status", "active") != "active":
+            skipped[lid] = f"ledger status is {led.get('status')}"
+            continue
+        exp = front.get("expires", "")
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", exp) and exp < datetime.now(timezone.utc).date().isoformat():
+            skipped[lid] = f"expired on {exp}"
+            continue
+        kinds = [x.strip() for x in front.get("applies_to", "").strip("[]").split(",") if x.strip()] or [led.get("kind", kind)]
+        if "all" not in kinds and kind not in kinds:
+            skipped[lid] = f"evidence is from {'/'.join(kinds)}, this is a {kind}"
+            continue
+        if len(applied) >= rules.get("max", 3):
+            skipped[lid] = "over the per-lane limit"
+            continue
+        applied.append(lid)
+    return applied, skipped
+
+
+def record_active_on(ids, ticket):
+    """Add this ticket to active_on of each applied candidate's ledger entry."""
+    for lid in ids:
+        p = ROOT / "ledger" / f"{lid}.yaml"
+        text = p.read_text(encoding="utf-8")
+        m = re.search(r"^active_on:\s*\[(.*?)\]", text, re.M)
+        if not m:
+            continue
+        have = [x.strip() for x in m.group(1).split(",") if x.strip()]
+        if ticket not in have:
+            have.append(ticket)
+            p.write_text(text[:m.start()] + f"active_on: [{', '.join(have)}]" + text[m.end():], encoding="utf-8", newline="\n")
 
 
 def main():
@@ -119,7 +195,7 @@ def main():
 
     cmd = args.command[1:] if args.command[:1] == ["--"] else args.command
     launch_id = uuid.uuid4().hex[:12]
-    overlay = active_overlay(args.lane)
+    overlay, overlay_skipped = active_overlay(args.lane, kind)
 
     registry = read_registry(ROOT / "config" / "repos.yaml")
     local = read_registry(ROOT / "config" / "repos.local.yaml")
@@ -187,9 +263,10 @@ def main():
 
     log_event(events, "launcher", "lane_started", {
         "launch_id": launch_id, "kind": kind, "lane": args.lane, "repo": args.repo, "attempt": args.attempt,
-        "overlay": overlay, "exporter": args.exporter,
+        "overlay": overlay, "overlay_skipped": overlay_skipped, "exporter": args.exporter,
         "dump": dump.relative_to(ROOT).as_posix() if dump else None, "command": Path(cmd[0]).name,
     })
+    record_active_on(overlay, args.ticket)
     started = time.time()
     code = 1
     try:
