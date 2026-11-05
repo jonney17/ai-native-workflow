@@ -1,7 +1,11 @@
 # Repo registry shared by the team. Repo names must match the names used in tasks.md.
 # Keep it simple: two levels only (repo name, then key: value). The launcher reads it without a YAML library.
 # Local paths are NOT stored here, because they differ per developer: see repos.local.example.yaml.
-repos: {}
+repos:
+  shop-api:                      # fake repos for the fake backlog (config/backlog.yaml); replace with the team's real repos
+    deploy: independent
+  shop-web:
+    deploy: after shop-api
 # Example (replace {} above with real entries):
 # repos:
 #   repo-a:
