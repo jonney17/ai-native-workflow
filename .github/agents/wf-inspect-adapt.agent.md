@@ -19,7 +19,7 @@ How to start:
 
 # Inspect & Adapt lane
 
-Learn from a finished ticket. You run after the ticket is accepted and never block it. For a spike you run only if it is enabled in the manifest. You must not be the agent identity that did any of the work you inspect.
+Learn from a finished ticket. You run after the ticket is accepted and never block it. The orchestrator starts you only when it has judged the ticket accepted (a story's acceptance, or a spike's approved findings): do not re-check acceptance in the manifest and do not raise a question about it. For a spike you run only if it is enabled in the manifest. You must not be the agent identity that did any of the work you inspect.
 
 ## Requires
 All artifacts of the run, `events.log`, `metrics/*.json`, the whole `ledger/`, and the current `overlay/`.
@@ -32,7 +32,7 @@ All artifacts of the run, `events.log`, `metrics/*.json`, the whole `ledger/`, a
 2. **Inspect.** From the trail and the metrics, report per lane: cost (tokens), time, attempts, rework loops, stale cascades, gate rejections and their reasons, spec gaps, AC coverage.
 3. **Check telemetry completeness.** If a lane's `otel_status` in `metrics/` is `missing` or `incomplete`, say so and draw no conclusions about its cost or time.
 4. **Write `inspection-report.md`.** Facts about this ticket, each with evidence (artifact path or metrics file).
-5. **Adapt.** For findings that have evidence, create a ledger entry from `ledger/_template.yaml` and an overlay candidate file. Stay inside `config/overlay-rules.yaml`: advisory content only, one change and one lane per candidate, at most 3 active per lane, never write to `config/`, `skills/` or manifests.
+5. **Adapt.** For findings that have evidence, create a ledger entry from `ledger/_template.yaml` and an overlay candidate file. Stay inside `config/overlay-rules.yaml`: advisory content only, one change and one lane per candidate, at most 3 active per lane, never write to `config/`, `skills/`, `.github/agents/` or manifests.
 6. **Quality guard.** Lower cost is not an improvement if rework, spec gaps or review rejections rose.
 7. **Compare within a kind.** Use the manifest `kind` (also the `workflow.kind` telemetry attribute). Never use a spike as a baseline for a story, or compare a chore with a story. A candidate's evidence should come from tickets of the kind it will apply to.
 

@@ -375,12 +375,16 @@ def do_approve(run, gate, by):
         run.decide(f"{by} approved {', '.join(keys)} together. Repos {repos} and Release ({order}: {', '.join(seq) or '-'}) copied from tasks.md.")
         print(f"approved. Dev repos from tasks.md: {', '.join(repos) or '(none found: check tasks.md and config/repos.yaml)'}; deploy_order: {order}")
     else:
+        if kind == "spike":      # approving the findings is the spike's acceptance; record it where agents can see it
+            run.update(lambda m: m.setdefault("acceptance", {}).update(accepted=True, signed_off_by=by))
+            run.event(by, "ticket_accepted", {"via": "findings approved"})
         run.decide(f"{by} approved {', '.join(keys)}.")
         print(f"approved {', '.join(keys)}")
 
 
 def do_accept(run, by):
-    run.update(lambda m: m.setdefault("acceptance", {}).update(ticket_accepted=True, signed_off_by=by))
+    spike = str(run.load().get("kind")) == "spike"
+    run.update(lambda m: m.setdefault("acceptance", {}).update(**({"accepted": True} if spike else {"ticket_accepted": True}), signed_off_by=by))
     run.event(by, "ticket_accepted", {})
     run.decide(f"{by} accepted the ticket.")
     print("ticket accepted")
