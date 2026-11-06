@@ -1,0 +1,70 @@
+# Written by the orchestrator side (scripts/wf_state.py). Agents never edit this file.
+ticket: SHOP-102
+run: 1
+kind: story
+origin: ''
+prd_refs: [PRD-7#R4]
+lanes:
+  planner: {status: waiting}
+  qe: {status: waiting}
+  dev:
+    status: waiting
+    repos: {shop-web: waiting}
+  reviewer: {status: waiting}
+  inspect-adapt: {status: waiting}
+artifacts:
+  ticket-context.md: {owner: system, status: ready, hash: a2bfd98d}
+  spec.md:
+    owner: planner
+    status: approved
+    hash: 82df5be6
+    inputs: {ticket-context.md: a2bfd98d}
+    approved_by: navu
+  design.md:
+    owner: planner
+    status: approved
+    hash: e875f1cb
+    inputs: {ticket-context.md: a2bfd98d, spec.md: 82df5be6}
+    approved_by: navu
+  tasks.md:
+    owner: planner
+    status: approved
+    hash: c2e3ad5a
+    inputs: {ticket-context.md: a2bfd98d, spec.md: 82df5be6, design.md: e875f1cb}
+    approved_by: navu
+  test-plan.md:
+    owner: qe
+    status: ready
+    hash: 428b6f81
+    inputs: {spec.md: 82df5be6, tasks.md: c2e3ad5a}
+  changes:
+    owner: dev
+    status: ready
+    per_repo:
+      shop-web:
+        status: ready
+        version: 3
+        hash: a68ea081
+        inputs: {spec.md: 82df5be6, design.md: e875f1cb, tasks.md: c2e3ad5a}
+  verify-report.md:
+    owner: reviewer
+    status: ready
+    hash: 25f0c132
+    inputs: {test-plan.md: 428b6f81, changes: 3490d211}
+  review-report.md:
+    owner: reviewer
+    status: ready
+    hash: 9a7ed009
+    inputs: {test-plan.md: 428b6f81, changes: 3490d211}
+  acceptance-report.md: {owner: system, status: missing}
+  inspection-report.md:
+    owner: inspect-adapt
+    status: ready
+    hash: 4428951c
+    inputs: {review-report.md: 9a7ed009}
+release:
+  deploy_order: independent
+  sequence: []
+  repos: {shop-web: deployed}
+review: {human_required: false}
+acceptance: {policy: tbd, ticket_accepted: true, signed_off_by: navu, requirement_accepted: null}

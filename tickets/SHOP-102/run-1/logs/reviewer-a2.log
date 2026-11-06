@@ -1,0 +1,17 @@
+
+>>> You are the reviewer lane. Read .github/agents/wf-reviewer.agent.md first and follow it exactly. Do only that lane's work. Work item: root: C:\VNA\new version\ai-native-workflow run_dir: C:\VNA\new version\ai-native-work
+
+Info: Unknown tool name in the tool excludedlist: "shell"
+[tool] Viewing ...ve-workflow\.github\agents\wf-reviewer.agent.md
+[tool] Viewing ...ew version\ai-native-workflow\skills\_common.md
+[tool] Viewing ...w\tickets\SHOP-102\run-1\artifacts\test-plan.md
+[tool] Viewing ...rkflow\tickets\SHOP-102\run-1\artifacts\changes
+[tool] Viewing ...on\ai-native-workflow\skills\reviewer\templates
+[tool] Viewing ...ckets\SHOP-102\run-1\artifacts\changes\shop-web
+[tool] Viewing ...flow\skills\reviewer\templates\verify-report.md
+[tool] Viewing ...flow\skills\reviewer\templates\review-report.md
+[tool] Viewing ...ckets\SHOP-102\run-1\artifacts\verify-report.md
+[tool] Viewing ...ckets\SHOP-102\run-1\artifacts\review-report.md
+[tool] Viewing ...102\run-1\artifacts\changes\shop-web\summary.md
+[tool] apply_patch
+Reviewer artifacts are ready. The verification report maps both acceptance criteria to passing tests; the review report notes the real review steps that this placeholder lane did not perform.

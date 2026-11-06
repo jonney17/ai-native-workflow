@@ -1,0 +1,28 @@
+
+>>> You are the inspect-adapt lane. Read .github/agents/wf-inspect-adapt.agent.md first and follow it exactly. Do only that lane's work. Work item: root: C:\VNA\new version\ai-native-workflow run_dir: C:\VNA\new version\ai-n
+
+Info: Unknown tool name in the tool excludedlist: "shell"
+[tool] Viewing ...rkflow\.github\agents\wf-inspect-adapt.agent.md
+[tool] Viewing ...ew version\ai-native-workflow\skills\_common.md
+[tool] Viewing ...rsion\ai-native-workflow\tickets\SHOP-102\run-1
+[tool] Viewing ...-native-workflow\skills\inspect-adapt\templates
+[tool] Viewing ...ew version\ai-native-workflow\config\lanes.yaml
+[tool] Viewing ...tive-workflow\tickets\SHOP-102\run-1\events.log
+[tool] Viewing ...ative-workflow\tickets\SHOP-102\run-1\artifacts
+[tool] Viewing ...e-workflow\tickets\SHOP-102\run-1\manifest.yaml
+[tool] Viewing ...ve-workflow\tickets\SHOP-102\run-1\decisions.md
+[tool] Viewing ...kets\SHOP-102\run-1\artifacts\ticket-context.md
+[tool] Viewing ...rkflow\tickets\SHOP-102\run-1\artifacts\spec.md
+[tool] Viewing ...flow\tickets\SHOP-102\run-1\artifacts\design.md
+[tool] Viewing ...kflow\tickets\SHOP-102\run-1\artifacts\tasks.md
+[tool] Viewing ...w\tickets\SHOP-102\run-1\artifacts\test-plan.md
+[tool] Viewing ...ckets\SHOP-102\run-1\artifacts\verify-report.md
+[tool] Viewing ...ckets\SHOP-102\run-1\artifacts\review-report.md
+[tool] Viewing ...rkflow\tickets\SHOP-102\run-1\artifacts\changes
+[tool] Viewing ...rkflow\tickets\SHOP-102\run-1\artifacts\foo.txt
+[tool] Viewing ...kflow\tickets\SHOP-102\run-1\artifacts\notes.md
+[tool] Viewing ...low\tickets\SHOP-102\run-1\artifacts\summary.md
+[tool] Viewing ...ets\SHOP-102\run-1\artifacts\shop-web-README.md
+[tool] Viewing ...ckets\SHOP-102\run-1\artifacts\changes\shop-web
+[tool] apply_patch
+Wrote `tickets/SHOP-102/run-1/artifacts/inspection-report.md` with findings on the incomplete Dev attempts and inconsistent leftover artifacts.

@@ -36,7 +36,13 @@ python scripts/wf_run.py start --ticket PROJ-1 --verbose
 python scripts/wf_status.py PROJ-1                      # where it stands and what a person must do next
 ```
 
-The workers stop at human gates and print the command to continue. Or use the web UI, which shows the team as lanes, a ticket list and one-off requests: `node ui/server.js`. Details: [docs/running-a-run.md](docs/running-a-run.md).
+The workers stop at human gates and print the command to continue. Or start the local Python playbook to view workflow status and run human actions:
+
+```
+.\playbook\start.ps1
+```
+
+Details: [docs/running-a-run.md](docs/running-a-run.md).
 Design: [docs/workflow-design.md](docs/workflow-design.md). Demo: [demo/README.md](demo/README.md).
 
 ## Layout
@@ -46,8 +52,8 @@ Design: [docs/workflow-design.md](docs/workflow-design.md). Demo: [demo/README.m
 skills/          _common.md (rules every lane reads) and templates/ per lane
 config/          lanes.yaml (who needs/produces what), backlog.yaml (fake ticket list), risk-rules.yaml, budgets.yaml, runner.yaml, repos.yaml
 tickets/         tickets/<TICKET>/run-<N>/ : manifest.yaml, events.log, decisions.md, artifacts/
-ui/              server.js, index.html, app.js: the web UI (Node, no packages)
-scripts/         wf_acp.py (long-lived agent session), acp_probe.py (experiment), new_ticket.py, wf_status.py (read-only view), wf_run.py (workers + human commands), wf_api.py (JSON for the UI), wf_chat.py (chat with a lane), wf_state.py, wf_launch.py
+playbook/        server.py, index.html, start.ps1: the local workflow UI (Python)
+scripts/         wf_acp.py (long-lived agent session), acp_probe.py (experiment), new_ticket.py, wf_status.py (read-only view), wf_run.py (workers + human commands), wf_api.py (JSON workflow interface), wf_chat.py (chat with a lane), wf_state.py, wf_launch.py
 demo/            demo.py and stub_agent.py
 ```
 

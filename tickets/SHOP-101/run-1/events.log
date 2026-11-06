@@ -1,0 +1,45 @@
+# One event per line, tab-separated: <iso-timestamp>  <actor>  <event>  <json>
+# Agents append problem events (spec_gap, question_raised, escalate, ...). The orchestrator applies them.
+2026-11-06T02:25:33+00:00	system	ticket_created	{"ticket": "SHOP-101", "run": 1, "kind": "story", "origin": "", "prd_refs": []}
+2026-11-06T02:44:50+00:00	human	human_action_confirmed	{"action": "Fill artifacts/ticket-context.md, then: python scripts/wf_run.py ready --ticket SHOP-101 (it is missing)"}
+2026-11-06T03:00:46+00:00	human	human_action_confirmed	{"action": "Fill artifacts/ticket-context.md, then: python scripts/wf_run.py ready --ticket SHOP-101 (it is missing)"}
+2026-11-06T03:24:46+00:00	human	human_action_confirmed	{"action": "Fill artifacts/ticket-context.md, then: python scripts/wf_run.py ready --ticket SHOP-101 (it is missing)"}
+2026-11-06T03:30:58+00:00	ui	artifact_ready	{"artifact": "ticket-context.md"}
+2026-11-06T03:31:10+00:00	launcher	lane_started	{"attempt": 1, "lane": "planner", "mode": "acp", "repo": ""}
+2026-11-06T03:31:37+00:00	launcher	lane_exited	{"lane": "planner", "repo": "", "returncode": 0}
+2026-11-06T03:31:39+00:00	worker:planner	lane_finished	{"artifacts": ["spec.md", "design.md", "tasks.md"], "attempt": 1, "lane": "planner", "log": "tickets/SHOP-101/run-1/logs/planner-a1.log", "outcome": "ok", "repo": "", "returncode": 0, "seconds": 38.5}
+2026-11-06T03:31:52+00:00	navu	gate_approved	{"artifacts": ["spec.md", "design.md", "tasks.md"], "gate": "planner"}
+2026-11-06T03:31:52+00:00	orchestrator	manifest_updated	{"deploy_order": "ordered", "repos": ["shop-api", "shop-web"], "sequence": ["shop-api", "shop-web"]}
+2026-11-06T03:32:00+00:00	launcher	lane_started	{"attempt": 1, "lane": "dev", "mode": "acp", "repo": "shop-web"}
+2026-11-06T03:32:00+00:00	launcher	lane_started	{"attempt": 1, "lane": "qe", "mode": "acp", "repo": ""}
+2026-11-06T03:32:00+00:00	launcher	lane_started	{"attempt": 1, "lane": "dev", "mode": "acp", "repo": "shop-api"}
+2026-11-06T03:33:33+00:00	launcher	lane_exited	{"lane": "dev", "repo": "shop-api", "returncode": 0}
+2026-11-06T03:33:36+00:00	worker:dev	lane_finished	{"artifacts": [], "attempt": 1, "lane": "dev", "log": "tickets/SHOP-101/run-1/logs/dev-shop-api-a1.log", "outcome": "incomplete", "repo": "shop-api", "returncode": 0, "seconds": 99.2}
+2026-11-06T03:33:44+00:00	launcher	lane_started	{"attempt": 2, "lane": "dev", "mode": "acp", "repo": "shop-api"}
+2026-11-06T03:33:46+00:00	launcher	lane_exited	{"lane": "qe", "repo": "", "returncode": 0}
+2026-11-06T03:33:49+00:00	worker:qe	lane_finished	{"artifacts": ["test-plan.md"], "attempt": 1, "lane": "qe", "log": "tickets/SHOP-101/run-1/logs/qe-a1.log", "outcome": "ok", "repo": "", "returncode": 0, "seconds": 111.9}
+2026-11-06T03:34:02+00:00	launcher	lane_exited	{"lane": "dev", "repo": "shop-web", "returncode": 0}
+2026-11-06T03:34:04+00:00	worker:dev	lane_finished	{"artifacts": [], "attempt": 1, "lane": "dev", "log": "tickets/SHOP-101/run-1/logs/dev-shop-web-a1.log", "outcome": "incomplete", "repo": "shop-web", "returncode": 0, "seconds": 127.6}
+2026-11-06T03:34:09+00:00	launcher	lane_started	{"attempt": 2, "lane": "dev", "mode": "acp", "repo": "shop-web"}
+2026-11-06T03:35:40+00:00	launcher	lane_exited	{"lane": "dev", "repo": "shop-api", "returncode": 0}
+2026-11-06T03:35:40+00:00	launcher	lane_exited	{"lane": "dev", "repo": "shop-web", "returncode": 0}
+2026-11-06T03:35:42+00:00	worker:dev	lane_finished	{"artifacts": [], "attempt": 2, "lane": "dev", "log": "tickets/SHOP-101/run-1/logs/dev-shop-api-a2.log", "outcome": "incomplete", "repo": "shop-api", "returncode": 0, "seconds": 120.1}
+2026-11-06T03:35:42+00:00	worker:dev	lane_finished	{"artifacts": [], "attempt": 2, "lane": "dev", "log": "tickets/SHOP-101/run-1/logs/dev-shop-web-a2.log", "outcome": "incomplete", "repo": "shop-web", "returncode": 0, "seconds": 95.0}
+2026-11-06T03:35:50+00:00	launcher	lane_started	{"attempt": 3, "lane": "dev", "mode": "acp", "repo": "shop-web"}
+2026-11-06T03:35:50+00:00	launcher	lane_started	{"attempt": 3, "lane": "dev", "mode": "acp", "repo": "shop-api"}
+2026-11-06T03:36:23+00:00	launcher	lane_exited	{"lane": "dev", "repo": "shop-web", "returncode": 0}
+2026-11-06T03:36:23+00:00	launcher	lane_exited	{"lane": "dev", "repo": "shop-api", "returncode": 0}
+2026-11-06T03:36:25+00:00	worker:dev	lane_finished	{"artifacts": ["changes"], "attempt": 3, "lane": "dev", "log": "tickets/SHOP-101/run-1/logs/dev-shop-web-a3.log", "outcome": "ok", "repo": "shop-web", "returncode": 0, "seconds": 37.1}
+2026-11-06T03:36:26+00:00	worker:dev	lane_finished	{"artifacts": ["changes"], "attempt": 3, "lane": "dev", "log": "tickets/SHOP-101/run-1/logs/dev-shop-api-a3.log", "outcome": "ok", "repo": "shop-api", "returncode": 0, "seconds": 37.7}
+2026-11-06T03:36:30+00:00	launcher	lane_started	{"attempt": 1, "lane": "reviewer", "mode": "acp", "repo": ""}
+2026-11-06T03:37:06+00:00	launcher	lane_exited	{"lane": "reviewer", "repo": "", "returncode": 0}
+2026-11-06T03:37:06+00:00	orchestrator	risk_decision_applied	{"human_required": false}
+2026-11-06T03:37:08+00:00	worker:reviewer	lane_finished	{"artifacts": ["verify-report.md", "review-report.md"], "attempt": 1, "lane": "reviewer", "log": "tickets/SHOP-101/run-1/logs/reviewer-a1.log", "outcome": "ok", "repo": "", "returncode": 0, "seconds": 40.0}
+2026-11-06T03:37:11+00:00	ci_cd	deploy_started	{"repo": "shop-api"}
+2026-11-06T03:37:12+00:00	ci_cd	deployed	{"repo": "shop-api"}
+2026-11-06T03:37:12+00:00	ci_cd	deploy_started	{"repo": "shop-web"}
+2026-11-06T03:37:12+00:00	ci_cd	deployed	{"repo": "shop-web"}
+2026-11-06T03:38:36+00:00	navu	ticket_accepted	{}
+2026-11-06T03:38:41+00:00	launcher	lane_started	{"attempt": 1, "lane": "inspect-adapt", "mode": "acp", "repo": ""}
+2026-11-06T03:39:26+00:00	launcher	lane_exited	{"lane": "inspect-adapt", "repo": "", "returncode": 0}
+2026-11-06T03:39:28+00:00	worker:inspect-adapt	lane_finished	{"artifacts": ["inspection-report.md"], "attempt": 1, "lane": "inspect-adapt", "log": "tickets/SHOP-101/run-1/logs/inspect-adapt-a1.log", "outcome": "ok", "repo": "", "returncode": 0, "seconds": 48.0}

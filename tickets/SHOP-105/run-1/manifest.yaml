@@ -1,0 +1,46 @@
+# Written by the orchestrator side (scripts/wf_state.py). Agents never edit this file.
+ticket: SHOP-105
+run: 1
+kind: chore
+origin: tech-debt
+prd_refs: []
+lanes:
+  planner: {status: waiting}
+  qe: {status: waiting}
+  dev:
+    status: waiting
+    repos: {}
+  reviewer: {status: waiting}
+  inspect-adapt: {status: waiting}
+artifacts:
+  ticket-context.md: {owner: system, status: ready, hash: cc65bdba}
+  spec.md:
+    owner: planner
+    status: ready
+    hash: 3b1255f1
+    inputs: {ticket-context.md: cc65bdba}
+  design.md:
+    owner: planner
+    status: ready
+    hash: a54010b6
+    inputs: {ticket-context.md: cc65bdba, spec.md: 3b1255f1}
+  tasks.md:
+    owner: planner
+    status: ready
+    hash: 6ac8af8c
+    inputs: {ticket-context.md: cc65bdba, spec.md: 3b1255f1, design.md: a54010b6}
+  test-plan.md: {owner: qe, status: missing}
+  changes:
+    owner: dev
+    status: missing
+    per_repo: {}
+  verify-report.md: {owner: reviewer, status: missing}
+  review-report.md: {owner: reviewer, status: missing}
+  acceptance-report.md: {owner: system, status: missing}
+  inspection-report.md: {owner: inspect-adapt, status: missing}
+release:
+  deploy_order: independent
+  sequence: []
+  repos: {}
+review: {human_required: null}
+acceptance: {policy: tbd, ticket_accepted: null, signed_off_by: null, requirement_accepted: null}

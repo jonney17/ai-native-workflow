@@ -1,0 +1,47 @@
+# One event per line, tab-separated: <iso-timestamp>  <actor>  <event>  <json>
+# Agents append problem events (spec_gap, question_raised, escalate, ...). The orchestrator applies them.
+2026-11-06T03:40:18+00:00	system	ticket_created	{"ticket": "SHOP-102", "run": 1, "kind": "story", "origin": "", "prd_refs": ["PRD-7#R4"]}
+2026-11-06T03:40:18+00:00	ui	artifact_ready	{"artifact": "ticket-context.md"}
+2026-11-06T03:40:23+00:00	launcher	lane_started	{"attempt": 1, "lane": "planner", "mode": "acp", "repo": ""}
+2026-11-06T03:41:03+00:00	launcher	lane_exited	{"lane": "planner", "repo": "", "returncode": 0}
+2026-11-06T03:41:06+00:00	worker:planner	lane_finished	{"artifacts": ["spec.md", "design.md", "tasks.md"], "attempt": 1, "lane": "planner", "log": "tickets/SHOP-102/run-1/logs/planner-a1.log", "outcome": "ok", "repo": "", "returncode": 0, "seconds": 44.3}
+2026-11-06T03:41:22+00:00	navu	gate_approved	{"artifacts": ["spec.md", "design.md", "tasks.md"], "gate": "planner"}
+2026-11-06T03:41:22+00:00	orchestrator	manifest_updated	{"deploy_order": "independent", "repos": ["shop-web"], "sequence": []}
+2026-11-06T03:41:38+00:00	launcher	lane_started	{"attempt": 1, "lane": "dev", "mode": "acp", "repo": "shop-web"}
+2026-11-06T03:41:38+00:00	launcher	lane_started	{"attempt": 1, "lane": "qe", "mode": "acp", "repo": ""}
+2026-11-06T03:43:04+00:00	launcher	lane_exited	{"lane": "dev", "repo": "shop-web", "returncode": 0}
+2026-11-06T03:43:06+00:00	worker:dev	lane_finished	{"artifacts": [], "attempt": 1, "lane": "dev", "log": "tickets/SHOP-102/run-1/logs/dev-shop-web-a1.log", "outcome": "incomplete", "repo": "shop-web", "returncode": 0, "seconds": 99.3}
+2026-11-06T03:43:15+00:00	launcher	lane_started	{"attempt": 2, "lane": "dev", "mode": "acp", "repo": "shop-web"}
+2026-11-06T03:43:57+00:00	launcher	lane_exited	{"lane": "qe", "repo": "", "returncode": 0}
+2026-11-06T03:43:59+00:00	worker:qe	lane_finished	{"artifacts": ["test-plan.md"], "attempt": 1, "lane": "qe", "log": "tickets/SHOP-102/run-1/logs/qe-a1.log", "outcome": "ok", "repo": "", "returncode": 0, "seconds": 151.9}
+2026-11-06T03:44:11+00:00	launcher	lane_exited	{"lane": "dev", "repo": "shop-web", "returncode": 0}
+2026-11-06T03:44:14+00:00	worker:dev	lane_finished	{"artifacts": [], "attempt": 2, "lane": "dev", "log": "tickets/SHOP-102/run-1/logs/dev-shop-web-a2.log", "outcome": "incomplete", "repo": "shop-web", "returncode": 0, "seconds": 60.4}
+2026-11-06T03:44:20+00:00	launcher	lane_started	{"attempt": 3, "lane": "dev", "mode": "acp", "repo": "shop-web"}
+2026-11-06T03:44:50+00:00	launcher	lane_exited	{"lane": "dev", "repo": "shop-web", "returncode": 0}
+2026-11-06T03:44:52+00:00	worker:dev	lane_finished	{"artifacts": ["changes"], "attempt": 3, "lane": "dev", "log": "tickets/SHOP-102/run-1/logs/dev-shop-web-a3.log", "outcome": "ok", "repo": "shop-web", "returncode": 0, "seconds": 34.2}
+2026-11-06T03:44:55+00:00	launcher	lane_started	{"attempt": 1, "lane": "reviewer", "mode": "acp", "repo": ""}
+2026-11-06T03:45:26+00:00	launcher	lane_exited	{"lane": "reviewer", "repo": "", "returncode": 0}
+2026-11-06T03:45:26+00:00	orchestrator	risk_decision_applied	{"human_required": false}
+2026-11-06T03:45:27+00:00	ci_cd	deploy_started	{"repo": "shop-web"}
+2026-11-06T03:45:27+00:00	ci_cd	deployed	{"repo": "shop-web"}
+2026-11-06T03:45:28+00:00	worker:reviewer	lane_finished	{"artifacts": ["verify-report.md", "review-report.md"], "attempt": 1, "lane": "reviewer", "log": "tickets/SHOP-102/run-1/logs/reviewer-a1.log", "outcome": "ok", "repo": "", "returncode": 0, "seconds": 34.2}
+2026-11-06T03:46:29+00:00	navu	ticket_accepted	{}
+2026-11-06T03:46:36+00:00	launcher	lane_started	{"attempt": 1, "lane": "inspect-adapt", "mode": "acp", "repo": ""}
+2026-11-06T03:47:30+00:00	launcher	lane_exited	{"lane": "inspect-adapt", "repo": "", "returncode": 0}
+2026-11-06T03:47:32+00:00	worker:inspect-adapt	lane_finished	{"artifacts": ["inspection-report.md"], "attempt": 1, "lane": "inspect-adapt", "log": "tickets/SHOP-102/run-1/logs/inspect-adapt-a1.log", "outcome": "ok", "repo": "", "returncode": 0, "seconds": 57.3}
+2026-11-06T04:38:03+00:00	launcher	lane_started	{"attempt": 2, "lane": "qe", "mode": "acp", "repo": ""}
+2026-11-06T04:39:21+00:00	launcher	lane_exited	{"lane": "qe", "repo": "", "returncode": 0}
+2026-11-06T04:39:23+00:00	worker:qe	lane_finished	{"artifacts": ["test-plan.md"], "attempt": 2, "lane": "qe", "log": "tickets/SHOP-102/run-1/logs/qe-a2.log", "outcome": "ok", "repo": "", "returncode": 0, "seconds": 82.1}
+2026-11-06T04:45:42+00:00	launcher	lane_started	{"attempt": 3, "lane": "qe", "mode": "acp", "repo": ""}
+2026-11-06T04:46:34+00:00	launcher	lane_exited	{"lane": "qe", "repo": "", "returncode": 0}
+2026-11-06T04:46:36+00:00	worker:qe	lane_finished	{"artifacts": ["test-plan.md"], "attempt": 3, "lane": "qe", "log": "tickets/SHOP-102/run-1/logs/qe-a3.log", "outcome": "ok", "repo": "", "returncode": 0, "seconds": 64.8}
+2026-11-06T04:46:57+00:00	launcher	lane_started	{"attempt": 2, "lane": "reviewer", "mode": "acp", "repo": ""}
+2026-11-06T04:47:28+00:00	launcher	lane_exited	{"lane": "reviewer", "repo": "", "returncode": 0}
+2026-11-06T04:47:31+00:00	worker:reviewer	lane_finished	{"artifacts": ["review-report.md"], "attempt": 2, "lane": "reviewer", "log": "tickets/SHOP-102/run-1/logs/reviewer-a2.log", "outcome": "incomplete", "repo": "", "returncode": 0, "seconds": 34.5}
+2026-11-06T04:47:37+00:00	launcher	lane_started	{"attempt": 3, "lane": "reviewer", "mode": "acp", "repo": ""}
+2026-11-06T04:48:41+00:00	launcher	lane_exited	{"lane": "reviewer", "repo": "", "returncode": 0}
+2026-11-06T04:48:43+00:00	worker:reviewer	lane_finished	{"artifacts": ["verify-report.md", "review-report.md"], "attempt": 3, "lane": "reviewer", "log": "tickets/SHOP-102/run-1/logs/reviewer-a3.log", "outcome": "ok", "repo": "", "returncode": 0, "seconds": 67.2}
+2026-11-06T05:02:33+00:00	launcher	lane_started	{"attempt": 2, "kind": "story", "lane": "inspect-adapt", "repo": ""}
+2026-11-06T05:03:46+00:00	launcher	lane_exited	{"lane": "inspect-adapt", "repo": "", "returncode": 0, "seconds": 72.7}
+2026-11-06T06:20:17+00:00	launcher	lane_started	{"attempt": 3, "kind": "story", "lane": "inspect-adapt", "repo": ""}
+2026-11-06T06:21:42+00:00	launcher	lane_exited	{"lane": "inspect-adapt", "repo": "", "returncode": 0, "seconds": 84.6}

@@ -24,7 +24,7 @@ Requires `ticket-context.md`. Produces `spec.md`, `design.md`, `tasks.md` (a hum
 For a spike produce only `findings.md`.
 
 ## Placeholder steps
-1. Read `ticket-context.md`.
+1. Read `ticket-context.md`. On plan rework, use the latest `## Plan rejection feedback` section as the required correction and regenerate the plan artifacts to match it. The same feedback is recorded in `events.log`.
 2. Write `spec.md` from `skills/planner/templates/spec.md`: one `AC-n` per source criterion, with the `## Traceability` table (keep the headings).
 3. Write `design.md`: a few lines. No template.
 4. Write `tasks.md` from `skills/planner/templates/tasks.md`: one row per repo named in `ticket-context.md`, and the `## Release` section with `deploy_order:` (and `sequence:` when ordered). Repo names must be the ones in the ticket context.

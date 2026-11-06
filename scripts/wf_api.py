@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""JSON for the web UI (ui/server.js). The UI is JavaScript; everything that knows about runs and lanes is here.
+"""JSON interface for workflow state and commands.
 
   wf_api.py board                      the team board and the ticket list
   wf_api.py state TICKET               one ticket: lanes, gates, files, next actions
@@ -21,6 +21,7 @@ sys.path.insert(0, str(HERE))
 import wf_status as S  # noqa: E402
 import wf_state as W  # noqa: E402
 import wf_run as R  # noqa: E402
+import new_ticket as N  # noqa: E402
 import yaml  # noqa: E402
 
 ROOT = S.ROOT
@@ -196,15 +197,63 @@ def intake(tid):
     b = next((x for x in backlog() if x["id"] == tid), None)
     if b is None or not NAME.match(tid):
         raise RuntimeError("unknown ticket")
-    if not (ROOT / "tickets" / tid).exists():
-        run_cmd(HERE / "new_ticket.py", "--ticket", tid, "--kind", "story" if b.get("prd") else "chore", *(["--prd", b["prd"]] if b.get("prd") else ["--origin", "tech-debt"]))
-        crit = "\n".join(f"| J-{i} | {c} |" for i, c in enumerate(b.get("criteria", []), 1))
-        ctx = ROOT / "tickets" / tid / "run-1" / "artifacts" / "ticket-context.md"
-        ctx.write_text(f"# {tid}: {b['title']}\n\nPRD refs: {b.get('prd') or 'none'}.\n\n## Description\n{b.get('description', '')}\n\n"
-                       f"## {'Jira criteria' if b.get('prd') else 'Done criteria'}\n| Id | Criterion |\n|----|-----------|\n{crit}\n\n"
-                       f"## Notes\nRepos involved: {', '.join(b.get('repos', []))}.\n", encoding="utf-8", newline="\n")
-        run_cmd(HERE / "wf_run.py", "ready", "--ticket", tid, "--by", "ui")
-    return {"path": S.analyze(tid)["path"]}
+    if (ROOT / "tickets" / "_archive" / tid).exists():
+        raise RuntimeError(f"{tid} is archived; restore it before starting from the backlog")
+
+    kind = "story" if b.get("prd") else "chore"
+    prd_refs = [str(b["prd"])] if b.get("prd") else []
+    origin = "" if b.get("prd") else "tech-debt"
+    ticket_dir = ROOT / "tickets" / tid
+    run_number = S.latest_run(ticket_dir) if ticket_dir.is_dir() else None
+    if run_number is None:
+        run_number = 1
+        run_dir = ticket_dir / f"run-{run_number}"
+        if run_dir.exists():
+            raise RuntimeError(f"{run_dir} exists but has no valid run manifest; inspect it before starting")
+        run_cmd(
+            HERE / "new_ticket.py", "--ticket", tid, "--run", str(run_number),
+            "--kind", kind, *(["--prd", *prd_refs] if prd_refs else ["--origin", origin]),
+        )
+
+    ctx = ticket_dir / f"run-{run_number}" / "artifacts" / "ticket-context.md"
+    templates = {
+        N.CONTEXT[kind](tid, run_number, prd_refs, origin),
+        N.CONTEXT[kind](tid, run_number, [], ""),
+    }
+    if not ctx.is_file() or ctx.read_text(encoding="utf-8") in templates:
+        criteria = [str(value) for value in (b.get("criteria") or [])]
+        rows = "\n".join(f"| J-{i} | {criterion} |" for i, criterion in enumerate(criteria, 1))
+        if not rows:
+            rows = "| J-1 | none provided |"
+        repos = [str(value) for value in (b.get("repos") or [])]
+        ctx.write_text(
+            N.header(tid, run_number)
+            + f"# {tid}: {b.get('title') or tid}\n\n"
+            + f"- Jira: {tid}\n"
+            + f"- PRD requirements: {', '.join(prd_refs) or 'none'}\n"
+            + f"- Affected repos (first guess): {', '.join(repos) or 'none provided'}\n\n"
+            + f"## Ticket description\n\n{str(b.get('description') or 'none provided').strip()}\n\n"
+            + f"## {'Jira acceptance criteria and scenarios' if prd_refs else 'Done criteria'}\n\n"
+            + "| Id | Criterion |\n|---|---|\n"
+            + rows
+            + "\n\n## Relevant PRD sections\n\n"
+            + (f"{', '.join(prd_refs)}\n" if prd_refs else "none provided\n"),
+            encoding="utf-8",
+            newline="\n",
+        )
+        run_cmd(
+            HERE / "wf_run.py", "ready", "--ticket", tid,
+            "--run", str(run_number), "--by", "ui",
+        )
+
+    res = S.analyze(tid, run_number)
+    context_status = (res.get("artifacts") or {}).get("ticket-context.md", {}).get("status")
+    if context_status not in ("ready", "approved"):
+        raise RuntimeError(
+            f"{tid} already has a customized ticket-context.md that is not ready; "
+            "review it and mark it ready before starting the workflow"
+        )
+    return {"path": res["path"], "run": run_number}
 
 
 def acp(lane):

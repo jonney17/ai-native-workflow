@@ -28,6 +28,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from pathlib import Path
@@ -74,7 +75,27 @@ def prompt_parts(runner, run, lane, repo, attempt):
     answers = [e["detail"].get("text", "") for e in run.events()
                if e["event"] == "question_answered" and e["detail"].get("lane") == lane
                and (not repo or e["detail"].get("repo") in ("", None, repo)) and e["detail"].get("text")]
-    extra = ("\n  answers from a person to your earlier question(s), oldest first:\n" + "\n".join("  - " + a for a in answers)) if answers else ""
+    notes = []
+    if answers:
+        notes.append("answers from a person to your earlier question(s), oldest first:\n" + "\n".join(f"  - {answer}" for answer in answers))
+    if lane == "planner":
+        rejections = [event for event in run.events()
+                      if event["event"] == "gate_rejected" and event["detail"].get("gate") == "planner"]
+        artifacts = run.load().get("artifacts") or {}
+        pending_rejections = [
+            event for event in rejections
+            if any((artifacts.get(name) or {}).get("status") == "rejected"
+                   for name in event["detail"].get("artifacts") or [])
+        ]
+        if pending_rejections:
+            rejection = pending_rejections[-1]["detail"]
+            rejected = ", ".join(rejection.get("artifacts") or [])
+            notes.append(
+                "human feedback on the rejected plan; address it in this rework:\n"
+                f"  rejected artifacts: {rejected or 'plan'}\n"
+                f"  reason: {rejection.get('reason') or '(no reason provided)'}"
+            )
+    extra = "\n  " + "\n  ".join(notes) if notes else ""
     repo_line = (f"\n  repo: {repo}" + (f", at {repo_path}" if repo_path else "")) if repo else ""
     fmt = {"lane": lane, "repo": repo, "ticket": run.ticket, "run": run.run, "attempt": attempt, "root": str(ROOT),
            "run_dir": str(run.dir), "repo_line": repo_line, "extra_line": extra, "repo_path": repo_path}
@@ -456,6 +477,40 @@ def gate_keys(run, gate):
     return list((lane.get("gate") or {}).get("artifacts") or []), kind
 
 
+def update_ticket_context_feedback(run, reason):
+    path = run.path_of("ticket-context.md")
+    if not path.is_file():
+        raise RuntimeError(f"Cannot reject the plan: {path} is missing.")
+    content = path.read_text(encoding="utf-8")
+    heading = "## Plan rejection feedback"
+    feedback = (
+        f"{heading}\n\n"
+        "The plan was rejected. Update this context to incorporate the feedback below, "
+        "then regenerate the plan artifacts.\n\n"
+        + "\n".join(f"> {line}" if line else ">" for line in reason.splitlines())
+        + "\n"
+    )
+    match = re.search(r"(?m)^## Plan rejection feedback\s*$", content)
+    if match:
+        next_heading = re.search(r"(?m)^## (?!Plan rejection feedback\s*$)", content[match.end():])
+        end = match.end() + next_heading.start() if next_heading else len(content)
+        updated = content[:match.start()] + feedback + content[end:]
+    else:
+        updated = content.rstrip() + "\n\n" + feedback
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", newline="\n", dir=path.parent,
+            prefix=f".{path.name}.", suffix=".tmp", delete=False,
+        ) as temporary:
+            temp_path = Path(temporary.name)
+            temporary.write(updated)
+        os.replace(temp_path, path)
+    finally:
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
+
+
 def do_approve(run, gate, by):
     keys, kind = gate_keys(run, gate)
     res = S.analyze(run.ticket, run.run)
@@ -503,6 +558,7 @@ def main():
     ap.add_argument("--by", default=os.environ.get("USERNAME") or os.environ.get("USER") or "human")
     ap.add_argument("--reason", default="")
     ap.add_argument("--text", default="")
+    ap.add_argument("--restart", action="store_true", help="restart workflow workers after rejecting the planner gate")
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--auto-approve", action="store_true", help="play the human at every gate (testing only)")
     ap.add_argument("--verbose", action="store_true", help="show the agent's output as it runs")
@@ -541,12 +597,37 @@ def main():
     elif args.command == "approve":
         do_approve(run, args.gate, args.by)
     elif args.command == "reject":
-        keys, _ = gate_keys(run, args.gate)
-        for k in keys:
-            run.mark(k, "rejected")
-        run.event(args.by, "gate_rejected", {"gate": args.gate, "artifacts": keys, "reason": args.reason})
-        run.decide(f"{args.by} rejected {', '.join(keys)}: {args.reason or 'no reason given'}")
-        print(f"rejected {', '.join(keys)}; the lane will start again")
+        res = S.analyze(args.ticket, args.run)
+        if args.restart and (args.gate != "planner" or res["kind"] == "spike"):
+            sys.exit("error: --restart is only supported when rejecting a story or chore plan")
+        gate_state = (res.get("gates") or {}).get(args.gate, {}).get("state")
+        if gate_state != "awaiting_approval":
+            sys.exit(f"error: the {args.gate} gate is not waiting for a decision (it is {gate_state or 'not applicable'}).")
+        keys, kind = gate_keys(run, args.gate)
+        if args.gate == "planner" and kind != "spike":
+            if not args.reason.strip():
+                sys.exit("error: a rejection reason is required to update ticket-context.md")
+            run.set_lane("planner", "blocked")
+            try:
+                update_ticket_context_feedback(run, args.reason.strip())
+                run.mark("ticket-context.md", "ready")
+                run.event(args.by, "artifact_ready", {"artifact": "ticket-context.md", "source": "plan_rejection_feedback"})
+                for key in keys:
+                    run.mark(key, "rejected")
+                run.event(args.by, "gate_rejected", {"gate": args.gate, "artifacts": keys, "reason": args.reason.strip()})
+                run.decide(f"{args.by} rejected {', '.join(keys)}: {args.reason.strip()}")
+            finally:
+                run.set_lane("planner", "waiting")
+            print("ticket-context.md updated from the rejection feedback; plan artifacts rejected for rework")
+            if args.restart:
+                print("Restarting workflow workers...")
+                return start(args, run)
+        else:
+            for k in keys:
+                run.mark(k, "rejected")
+            run.event(args.by, "gate_rejected", {"gate": args.gate, "artifacts": keys, "reason": args.reason})
+            run.decide(f"{args.by} rejected {', '.join(keys)}: {args.reason or 'no reason given'}")
+            print(f"rejected {', '.join(keys)}; the lane will start again")
     elif args.command == "answer":
         if not args.lane:
             sys.exit("error: --lane is required")

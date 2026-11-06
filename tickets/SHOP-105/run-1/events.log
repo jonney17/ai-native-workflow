@@ -1,0 +1,12 @@
+# One event per line, tab-separated: <iso-timestamp>  <actor>  <event>  <json>
+# Agents append problem events (spec_gap, question_raised, escalate, ...). The orchestrator applies them.
+2026-11-06T04:17:40+00:00	system	ticket_created	{"ticket": "SHOP-105", "run": 1, "kind": "chore", "origin": "tech-debt", "prd_refs": []}
+2026-11-06T04:17:40+00:00	ui	artifact_ready	{"artifact": "ticket-context.md"}
+2026-11-06T04:17:44+00:00	launcher	lane_started	{"attempt": 1, "lane": "planner", "mode": "acp", "repo": ""}
+2026-11-06T04:18:11+00:00	launcher	lane_exited	{"lane": "planner", "repo": "", "returncode": 0}
+2026-11-06T04:18:13+00:00	worker:planner	lane_finished	{"artifacts": ["spec.md", "design.md", "tasks.md"], "attempt": 1, "lane": "planner", "log": "tickets/SHOP-105/run-1/logs/planner-a1.log", "outcome": "ok", "repo": "", "returncode": 0, "seconds": 30.1}
+2026-11-06T04:26:50+00:00	navu	artifact_ready	{"artifact": "ticket-context.md", "source": "plan_rejection_feedback"}
+2026-11-06T04:26:50+00:00	navu	gate_rejected	{"artifacts": ["spec.md", "design.md", "tasks.md"], "gate": "planner", "reason": "add more task to print hello world at the end"}
+2026-11-06T04:27:04+00:00	launcher	lane_started	{"attempt": 2, "lane": "planner", "mode": "acp", "repo": ""}
+2026-11-06T04:27:47+00:00	launcher	lane_exited	{"lane": "planner", "repo": "", "returncode": 0}
+2026-11-06T04:27:50+00:00	worker:planner	lane_finished	{"artifacts": ["spec.md", "design.md", "tasks.md"], "attempt": 2, "lane": "planner", "log": "tickets/SHOP-105/run-1/logs/planner-a2.log", "outcome": "ok", "repo": "", "returncode": 0, "seconds": 53.7}

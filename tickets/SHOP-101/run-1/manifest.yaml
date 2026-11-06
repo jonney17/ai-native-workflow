@@ -1,0 +1,75 @@
+# Written by the orchestrator side (scripts/wf_state.py). Agents never edit this file.
+ticket: SHOP-101
+run: 1
+kind: story
+origin: ''
+prd_refs: []
+lanes:
+  planner: {status: waiting}
+  qe: {status: waiting}
+  dev:
+    status: waiting
+    repos: {shop-api: waiting, shop-web: waiting}
+  reviewer: {status: waiting}
+  inspect-adapt: {status: waiting}
+artifacts:
+  ticket-context.md: {owner: system, status: ready, hash: 39c82aa8}
+  spec.md:
+    owner: planner
+    status: approved
+    hash: 9ff4d34c
+    inputs: {ticket-context.md: 39c82aa8}
+    approved_by: navu
+  design.md:
+    owner: planner
+    status: approved
+    hash: e5cdbc89
+    inputs: {ticket-context.md: 39c82aa8, spec.md: 9ff4d34c}
+    approved_by: navu
+  tasks.md:
+    owner: planner
+    status: approved
+    hash: 09594b0a
+    inputs: {ticket-context.md: 39c82aa8, spec.md: 9ff4d34c, design.md: e5cdbc89}
+    approved_by: navu
+  test-plan.md:
+    owner: qe
+    status: ready
+    hash: 864c6236
+    inputs: {spec.md: 9ff4d34c, tasks.md: 09594b0a}
+  changes:
+    owner: dev
+    status: ready
+    per_repo:
+      shop-web:
+        status: ready
+        version: 3
+        hash: 254e2b38
+        inputs: {spec.md: 9ff4d34c, design.md: e5cdbc89, tasks.md: 09594b0a}
+      shop-api:
+        status: ready
+        version: 3
+        hash: 9347b2ee
+        inputs: {spec.md: 9ff4d34c, design.md: e5cdbc89, tasks.md: 09594b0a}
+  verify-report.md:
+    owner: reviewer
+    status: ready
+    hash: 1fcb8200
+    inputs: {test-plan.md: 864c6236, changes: 299a9cba}
+  review-report.md:
+    owner: reviewer
+    status: ready
+    hash: '98296275'
+    inputs: {test-plan.md: 864c6236, changes: 299a9cba}
+  acceptance-report.md: {owner: system, status: missing}
+  inspection-report.md:
+    owner: inspect-adapt
+    status: ready
+    hash: b08db84b
+    inputs: {review-report.md: '98296275'}
+release:
+  deploy_order: ordered
+  sequence: [shop-api, shop-web]
+  repos: {shop-api: deployed, shop-web: deployed}
+review: {human_required: false}
+acceptance: {policy: tbd, ticket_accepted: true, signed_off_by: navu, requirement_accepted: null}
