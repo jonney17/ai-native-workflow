@@ -21,19 +21,23 @@ python scripts/wf_run.py start --ticket PROJ-1 --verbose       # the one trigger
 
 It ends when the ticket is Done or Escalated. Agent output is saved in `logs/` of the run folder.
 
-## The UI: the team as lanes
+## The playbook: workflow status and actions
 
 ```
-node ui/server.js          # opens http://127.0.0.1:8765 (this computer only). Needs Node 18+ and nothing else.
+.\playbook\start.ps1       # opens http://127.0.0.1:8765 on this computer only
 ```
 
-The UI is JavaScript (`ui/server.js`, `ui/index.html`, `ui/app.js`). It asks `scripts/wf_api.py` for JSON and starts the Python workers.
+The playbook is served by `playbook/server.py` and uses the same Python workflow scripts described below. It shows tickets, derived status, lane and artifact readiness, and the next available human actions. Buttons run the corresponding workflow commands and display their output. It binds to localhost; stop it with `Ctrl+C`.
 
-- **One row per lane** (Planner, Dev, QE, Reviewer, Inspect & Adapt): its status (`idle`, `waiting`, `working`, `waiting for you`, `blocked`, `failed`), what it is doing on which ticket, a **live log** while it works on a ticket, and a **chat box**.
-- **The chat box** does two things. When the lane has asked a ticket question, it shows the question and your text is the answer (the lane continues in the same session). Otherwise it is a chat with that lane outside any ticket: a long-lived session per lane (`scripts/wf_chat.py`); say what you want, and if the lane lacks something it asks. **Clear** starts a new conversation. Files a chat produces go to `tasks/chat-<lane>/` (git-ignored).
-- **Tickets:** the list comes from `config/backlog.yaml` (fake for now; later the Jira board). **Start** creates the ticket run, fills its context and starts the workers, so the lanes process it one after the other. The table also lists each ticket's artifacts as chips with their status (draft, ready, approved, stale). Click a chip to read the artifact (a `changes/<repo>` chip shows that repo's files); when it belongs to a gate that waits for a person, the panel has **Approve** and **Reject** (with a reason) right there. **Open** shows gates (approve, reject), files, last logs, retry and accept.
+The **Work items** panel opens automatically when active work items are present. Collapse it into a narrow left rail on desktop to give the workflow more horizontal space; your preference is remembered. On smaller screens, it becomes a compact header above the workflow. **Remove** archives a work item and its run data under `tickets/_archive/`; restore it from the panel's **Archived** list. Archiving is blocked while a command for that work item is running.
 
-It runs the same commands as below; use either. Set `WF_PYTHON` if your Python command is not `python3` or `python`.
+Select an item in the playbook's Backlog, then use the top-right **Start workflow** button to create its run, generate `ticket-context.md` from the backlog details, mark it ready, and launch the workers. Existing hand-edited context is preserved. For non-backlog items, the button starts or resumes the selected work item once its context is ready. It reflects the selected workflow's running, complete, and archived state. The workers wait at human gates and missing prerequisites.
+
+The playbook's **Refresh** button and automatic polling update each workflow-lane card and artifact-flow node in place, including lane and repo statuses, while preserving the diagram layout and text entered in human-action controls.
+
+Rejecting the Planner's plan replaces the `## Plan rejection feedback` section in `ticket-context.md`, marks the updated context ready, marks the plan artifacts rejected, and restarts the workflow if workers are not already running. The Planner uses the updated context to regenerate the plan; active workers pick up the rework automatically.
+
+Install the repository dependencies first with `python -m pip install -r requirements.txt`. You can also start the server directly with `python playbook/server.py [port]`.
 
 ## What people do
 

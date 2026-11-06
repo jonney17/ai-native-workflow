@@ -1,0 +1,15 @@
+# One event per line, tab-separated: <iso-timestamp>  <actor>  <event>  <json>
+# Agents append problem events (spec_gap, question_raised, escalate, ...). The orchestrator applies them.
+2026-11-06T03:47:33+00:00	system	ticket_created	{"ticket": "SHOP-104", "run": 1, "kind": "story", "origin": "", "prd_refs": ["PRD-7#R6"]}
+2026-11-06T03:47:33+00:00	ui	artifact_ready	{"artifact": "ticket-context.md"}
+2026-11-06T03:47:38+00:00	launcher	lane_started	{"attempt": 1, "lane": "planner", "mode": "acp", "repo": ""}
+2026-11-06T03:48:35+00:00	launcher	lane_exited	{"lane": "planner", "repo": "", "returncode": 0}
+2026-11-06T03:48:37+00:00	worker:planner	lane_finished	{"artifacts": ["spec.md", "design.md", "tasks.md"], "attempt": 1, "lane": "planner", "log": "tickets/SHOP-104/run-1/logs/planner-a1.log", "outcome": "ok", "repo": "", "returncode": 0, "seconds": 60.8}
+2026-11-06T04:01:06+00:00	navu	gate_rejected	{"artifacts": ["spec.md", "design.md", "tasks.md"], "gate": "planner", "reason": "add more task to print hello world at the end"}
+2026-11-06T04:01:35+00:00	launcher	lane_started	{"attempt": 2, "lane": "planner", "mode": "acp", "repo": ""}
+2026-11-06T04:02:27+00:00	launcher	lane_exited	{"lane": "planner", "repo": "", "returncode": 0}
+2026-11-06T04:02:29+00:00	worker:planner	lane_finished	{"artifacts": [], "attempt": 2, "lane": "planner", "log": "tickets/SHOP-104/run-1/logs/planner-a2.log", "outcome": "incomplete", "repo": "", "returncode": 0, "seconds": 56.0}
+2026-11-06T04:02:34+00:00	launcher	lane_started	{"attempt": 3, "lane": "planner", "mode": "acp", "repo": ""}
+2026-11-06T04:03:11+00:00	launcher	lane_exited	{"lane": "planner", "repo": "", "returncode": 0}
+2026-11-06T04:03:13+00:00	worker:planner	lane_finished	{"artifacts": [], "attempt": 3, "lane": "planner", "log": "tickets/SHOP-104/run-1/logs/planner-a3.log", "outcome": "incomplete", "repo": "", "returncode": 0, "seconds": 39.8}
+2026-11-06T04:03:16+00:00	orchestrator	lane_failed	{"lane": "planner", "reason": "more than 3 attempts", "repo": ""}

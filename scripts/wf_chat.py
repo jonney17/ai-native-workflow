@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Chat daemon for the UI: one long-lived ACP session per lane, for talking to a lane outside any ticket.
 
-Started by ui/server.js. JSON lines on stdin:  {"op": "send", "lane": "dev", "text": "..."}  or  {"op": "reset", "lane": "dev"}
+JSON lines on stdin:  {"op": "send", "lane": "dev", "text": "..."}  or  {"op": "reset", "lane": "dev"}
 JSON lines on stdout: {"lane", "type": "chunk"|"tool"|"turn_end"|"error", "text"}.
 """
 import json
