@@ -1,73 +1,62 @@
-# How lane workers (scripts/wf_run.py) start an agent session. Tune after the first real runs.
-# A person can answer a lane's question: the UI/`wf_run.py answer` reach the open session (mode acp).
+# How agent workers (scripts/wf_run.py) start an agent session. Tune after the first real runs.
+# A person can answer an agent's question: the UI/`wf_run.py answer` reach the open session (mode acp).
 version: 1
 
 poll_seconds: 5            # how often a worker looks at the derived state
 idle_exit_minutes: 120     # a worker that has not started anything for this long exits
 
-# acp: one long-lived session per lane (copilot --acp). A lane can stop to ask a question and the answer goes into the
+# acp: one long-lived session per agent (copilot --acp). An agent can stop to ask a question and the answer goes into the
 #      same session, so it continues with what it already read. print: one-shot `copilot -p` sessions (agent below).
 mode: acp          # (--trust-folder is rejected together with --acp)
 
 acp:
-  idle_seconds: 300          # no output at all for this long = the session is hung: stop it and retry the lane (0 = never)
+  idle_seconds: 300          # no output at all for this long = the session is hung: stop it and retry the agent (0 = never)
   command:
     - copilot
     - --acp
     - --stdio
     - --agent
-    - "wf-{lane}"
+    - "{instructions}"   # the agent's instructions: `instructions` in config/agents.yaml, default wf-<name>
     - --allow-all-tools
     - --excluded-tools
     - skill
-    - shell             # placeholder lanes need no shell; remove this line when a lane's real task does
+    - shell             # placeholder agents need no shell; remove this line when an agent's real task does
     - --add-dir
     - "{root}"
     - --deny-tool
     - "shell(git push)"
-  repo_args:               # added for a lane instance that works on a repo whose local path is known
+  repo_args:               # added for an agent instance that works on a repo whose local path is known
     - --add-dir
     - "{repo_path}"
 
 agent:
-  # The command wf_launch.py runs. Placeholders: {prompt} {lane} {repo} {ticket} {run} {attempt} {root} {run_dir}.
+  # The command wf_launch.py runs. Placeholders: {prompt} {agent} {instructions} {repo} {ticket} {run} {attempt} {root} {run_dir}.
   # Override per shell with the environment variable WF_AGENT_CMD (a JSON list), e.g. the demo's stub agent.
   command:
     - copilot
     - --agent
-    - "wf-{lane}"                  # the lane's role: .github/agents/wf-<lane>.agent.md (edit that file)
+    - "{instructions}"             # the agent's instructions (config/agents.yaml `instructions`, default wf-<name>): .github/agents/<instructions>.agent.md
     - -p
     - "{prompt}"                   # only the task: which work item
     - --allow-all-tools            # required for non-interactive mode
     - --excluded-tools
-    - skill                        # lanes follow their agent file only, not personal Copilot skills
-    - --no-ask-user                # a lane never waits for an answer; it raises question_raised instead
+    - skill                        # agents follow their agent file only, not personal Copilot skills
+    - --no-ask-user                # an agent never waits for an answer; it raises question_raised instead
     - --trust-folder
     - --add-dir
     - "{root}"
     - --deny-tool
     - "shell(git push)"
     - -n
-    - "{ticket}-{lane}{repo}-a{attempt}"
-  by_lane: {}              # extra arguments for one lane, e.g. dev: [--model, x] (the Free plan cannot pin a model)
-  # Added for a lane instance that works on a repo, when its local path is known (config/repos.local.yaml).
+    - "{ticket}-{agent}{repo}-a{attempt}"
+  by_agent: {}              # extra arguments for one agent, e.g. dev: [--model, x] (the Free plan cannot pin a model)
+  # Added for an agent instance that works on a repo, when its local path is known (config/repos.local.yaml).
   repo_args:
     - --add-dir
     - "{repo_path}"
 
-prompt: |
-  You are the {lane} lane. Read .github/agents/wf-{lane}.agent.md first and follow it exactly. Do only that lane's work.
-  Work item:
-  root: {root}
-  run_dir: {run_dir}
-  ticket: {ticket}, run: {run}, attempt: {attempt}{repo_line}{extra_line}
-  Your agent file says what to read and what to write.
-
-adhoc_prompt: |
-  This is a chat with a person outside any ticket, not a ticket run. You are the {lane} lane.
-  root: {root}
-  task_dir: {task_dir}
-  Read .github/agents/wf-{lane}.agent.md and skills/_common.md (section "Ad-hoc chat"). Answer in your messages. Put any file you produce in task_dir.
+# The first message of each session (which run, which agent file) is fixed in scripts/wf_run.py (task_message):
+# an agent's behaviour belongs in its agent file, .github/agents/<agent>.agent.md.
 
 deploy:
   # CI/CD stand-in, run once per repo in the Release order after the review passes.

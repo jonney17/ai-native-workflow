@@ -1,10 +1,11 @@
 # FAKE ticket list for building the workflow. Later this comes from the Jira board (tickets assigned to the team).
-# The UI shows these; starting one creates the ticket run and hands it to the lanes.
+# The Jira board tab shows the tickets whose assignee is the person running the playbook (WF_USER, else the OS user name).
+# Starting one creates the ticket run and hands it to the agents.
 tickets:
   - id: SHOP-101
     title: Show the tracking number on the order page
     prd: PRD-7#R2
-    assignee: team
+    assignee: tmnghia
     repos: [shop-api, shop-web]
     description: Customers ask support where their parcel is. Show the carrier tracking number on the order page.
     criteria:
@@ -13,7 +14,7 @@ tickets:
   - id: SHOP-102
     title: Add a free-shipping banner to the cart
     prd: PRD-7#R4
-    assignee: team
+    assignee: teammate
     repos: [shop-web]
     description: Tell customers how much more they need to spend to get free shipping.
     criteria:
@@ -22,7 +23,7 @@ tickets:
   - id: SHOP-103
     title: Rate-limit the order search API
     prd: PRD-9#R1
-    assignee: team
+    assignee: tmnghia
     repos: [shop-api]
     description: Protect the order search endpoint from bursts of requests.
     criteria:
@@ -31,7 +32,7 @@ tickets:
   - id: SHOP-104
     title: Export order history as CSV
     prd: PRD-7#R6
-    assignee: team
+    assignee: teammate
     repos: [shop-api, shop-web]
     description: Let customers download their order history.
     criteria:
@@ -40,7 +41,7 @@ tickets:
   - id: SHOP-105
     title: Upgrade the web app to the new UI library
     prd: ""
-    assignee: team
+    assignee: tmnghia
     repos: [shop-web]
     description: Tech debt. Upgrade the UI library; behavior must not change.
     criteria:

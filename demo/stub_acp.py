@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Fake ACP server for tests: speaks just enough of the protocol and does the stub agent's placeholder work.
-Environment: DEMO_ASK=<lane> makes that lane ask a question on its first prompt and work after the answer.
+Environment: DEMO_ASK=<name> makes that agent ask a question on its first prompt and work after the answer.
 Run it like `copilot --acp --stdio`: it reads JSON-RPC lines on stdin."""
 import json
 import os
@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import stub_agent as A  # noqa: E402  (reads WF_LANE, WF_TICKET ... from the environment)
+import stub_agent as A  # noqa: E402  (reads WF_AGENT, WF_TICKET ... from the environment)
 
 prompts = 0
 
@@ -35,10 +35,10 @@ for line in sys.stdin:
         time.sleep(float(os.environ.get("DEMO_PACE", "1")))
         if A.TASK_DIR:     # chat with a person outside a ticket
             time.sleep(0.3)
-            chunk("stub-session", f"[stub {A.LANE}] I got: " + said.split("The person says:")[-1].strip()[:200])
-        elif os.environ.get("DEMO_ASK") == A.LANE and prompts == 1:
+            chunk("stub-session", f"[stub {A.AGENT}] I got: " + said.split("The person says:")[-1].strip()[:200])
+        elif os.environ.get("DEMO_ASK") == A.AGENT and prompts == 1:
             chunk("stub-session", "Which environment should I target?")
         else:
-            ({"planner": A.planner, "qe": A.qe, "dev": A.dev, "reviewer": A.reviewer, "inspect-adapt": A.inspect_adapt}[A.LANE])()
+            A.run_agent()
             chunk("stub-session", "Done.")
         reply(m["id"], {"stopReason": "end_turn"})

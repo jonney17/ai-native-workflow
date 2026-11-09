@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Write side of the orchestrator: manifest, events, decisions and leases.
 
-Agents never use this. Lane workers (scripts/wf_run.py), the demo driver and humans do.
+Agents never use this. Agent workers (scripts/wf_run.py), the demo driver and humans do.
 Everything that changes a status goes through here, so there is one place that says how.
 The read side stays in scripts/wf_status.py, which never writes.
 """
@@ -29,6 +29,52 @@ MANIFEST_HEAD = "# Written by the orchestrator side (scripts/wf_state.py). Agent
 
 def now():
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+REPO_LOCKS = S.ROOT / "locks"
+
+
+def repo_acquire(repo, holder, minutes):
+    """One writer per repo across all tickets. Returns None when the lock is taken, else a note ('' or why it was freed).
+    A lock that outlives its lease (a crashed worker) is taken over, like a run lease."""
+    REPO_LOCKS.mkdir(exist_ok=True)
+    p = REPO_LOCKS / f"{repo}.json"
+    for _ in range(2):
+        try:
+            fd = os.open(str(p), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            try:
+                info = json.loads(p.read_text(encoding="utf-8"))
+                if info.get("holder") == holder:
+                    return ""
+                expired = datetime.fromisoformat(info["expires"]) < datetime.now(timezone.utc)
+            except (OSError, ValueError, KeyError):
+                expired = True
+            if not expired:
+                return None
+            with contextlib.suppress(OSError):
+                p.unlink()
+            continue
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump({"repo": repo, "holder": holder, "started": now(),
+                       "expires": (datetime.now(timezone.utc) + timedelta(minutes=minutes)).isoformat(timespec="seconds")}, f)
+        return ""
+    return None
+
+
+def repo_holder(repo):
+    """Who holds the repo lock now ('' when nobody)."""
+    try:
+        return json.loads((REPO_LOCKS / f"{repo}.json").read_text(encoding="utf-8")).get("holder", "")
+    except (OSError, ValueError):
+        return ""
+
+
+def repo_release(repo, holder):
+    p = REPO_LOCKS / f"{repo}.json"
+    with contextlib.suppress(OSError, ValueError):
+        if json.loads(p.read_text(encoding="utf-8")).get("holder") == holder:
+            p.unlink()
 
 
 def short_hash(path):
@@ -84,7 +130,7 @@ class Run:
     def load(self):
         for attempt in range(6):
             try:
-                return yaml.safe_load((self.dir / "manifest.yaml").read_text(encoding="utf-8")) or {}
+                return S.migrate_manifest(yaml.safe_load((self.dir / "manifest.yaml").read_text(encoding="utf-8")) or {})
             except (OSError, yaml.YAMLError):
                 if attempt == 5:
                     raise
@@ -125,7 +171,7 @@ class Run:
     def path_of(self, key, repo=None):
         """Where an artifact is: artifacts/ first, then the run folder (an agent may write it there)."""
         if repo:
-            return self.art / "changes" / repo
+            return self.art / key / repo
         return self.art / key if (self.art / key).exists() or not (self.dir / key).exists() else self.dir / key
 
     def mark(self, key, status, inputs=(), approved_by=None, repo=None, version=None):
@@ -133,9 +179,9 @@ class Run:
         def fn(m):
             arts = m.setdefault("artifacts", {})
             if repo:
-                ch = arts.setdefault("changes", {"owner": "dev", "status": "missing"})
+                ch = arts.setdefault(key, {"status": "missing"})
                 e = ch.setdefault("per_repo", {}).get(repo) or {}
-                path = self.art / "changes" / repo
+                path = self.art / key / repo
             else:
                 e = arts.get(key) or {"owner": "system"}
                 path = self.path_of(key)
@@ -157,18 +203,18 @@ class Run:
                 arts[key] = e
         self.update(fn)
 
-    def set_lane(self, lane, status, repo=None):
+    def set_agent(self, agent, status, repo=None):
         def fn(m):
-            lanes = m.setdefault("lanes", {})
-            ent = lanes.get(lane) if isinstance(lanes.get(lane), dict) else {}
+            agents = m.setdefault("agents", {})
+            ent = agents.get(agent) if isinstance(agents.get(agent), dict) else {}
             if repo:
                 ent.setdefault("repos", {})[repo] = status
             else:
                 ent["status"] = status
-            lanes[lane] = ent
+            agents[agent] = ent
         self.update(fn)
 
-    # ---- leases: one writer per lane instance; an expired lease returns the work to the queue
+    # ---- leases: one writer per agent instance; an expired lease returns the work to the queue
     def acquire(self, unit, minutes):
         d = self.dir / "leases"
         d.mkdir(exist_ok=True)
@@ -198,30 +244,30 @@ class Run:
         with contextlib.suppress(OSError):
             (self.dir / "leases" / f"{unit}.json").unlink()
 
-    def attempts_done(self, lane, repo=""):
-        """How many sessions of this lane instance have finished (any outcome). The next attempt is this + 1."""
+    def attempts_done(self, agent, repo=""):
+        """How many sessions of this agent instance have finished (any outcome). The next attempt is this + 1."""
         return sum(1 for e in self.events()
-                   if e["event"] == "lane_finished" and e["detail"].get("lane") == lane
+                   if e["event"] == "agent_finished" and e["detail"].get("agent") == agent
                    and (e["detail"].get("repo") or "") == (repo or ""))
 
-    def budget_used(self, lane, repo=""):
-        """Finished sessions of this lane instance since the last human reset (wf_run.py retry).
-        A reset with no repo covers every instance of the lane."""
+    def budget_used(self, agent, repo=""):
+        """Finished sessions of this agent instance since the last human reset (wf_run.py retry).
+        A reset with no repo covers every instance of the agent."""
         used = 0
         for e in self.events():
             d = e["detail"]
-            if d.get("lane") != lane:
+            if d.get("agent") != agent:
                 continue
-            if e["event"] == "lane_finished" and (d.get("repo") or "") == (repo or "") and d.get("outcome") != "blocked":
+            if e["event"] == "agent_finished" and (d.get("repo") or "") == (repo or "") and d.get("outcome") != "blocked":
                 used += 1
             elif e["event"] == "attempts_reset" and (not d.get("repo") or d.get("repo") == repo):
                 used = 0
         return used
 
-    def last_outcome(self, lane, repo=""):
-        """Outcome of the most recent finished session of this lane instance: ok | incomplete | crashed | None."""
+    def last_outcome(self, agent, repo=""):
+        """Outcome of the most recent finished session of this agent instance: ok | incomplete | crashed | None."""
         out = None
         for e in self.events():
-            if e["event"] == "lane_finished" and e["detail"].get("lane") == lane and (e["detail"].get("repo") or "") == (repo or ""):
+            if e["event"] == "agent_finished" and e["detail"].get("agent") == agent and (e["detail"].get("repo") or "") == (repo or ""):
                 out = e["detail"].get("outcome")
         return out

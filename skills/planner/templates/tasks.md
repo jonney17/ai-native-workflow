@@ -3,17 +3,17 @@ artifact: tasks.md
 ticket: <TICKET>
 run: <N>
 author: <agent identity>
-inputs: [ticket-context.md, spec.md, design.md]
+inputs: [ticket-context.md, design.md]
 status: draft
 ---
 <!-- Template. Keep the headings and the machine-read parts (marked MACHINE). Delete these comments. -->
 # Tasks
 
 ## Tasks
-<!-- MACHINE: repo names must match config/repos.yaml. Dev fans out from the repos listed here. -->
+<!-- MACHINE: repo names must match config/repos.yaml. Dev fans out from the repos listed here. Covers lists the ticket's criterion ids (J-n, or C-n for a chore); every id must be covered by a task. -->
 | Task | Repo | Covers | Depends on |
 |------|------|--------|------------|
-| T-1 ... | <repo-name> | AC-1 | none |
+| T-1 ... | <repo-name> | J-1 | none |
 
 ## Release
 <!-- MACHINE: the orchestrator copies these keys into the manifest. -->

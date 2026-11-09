@@ -15,7 +15,7 @@ Verdict: pass
 <!-- MACHINE: verdict is pass, rework or design_rejected. On rework or design_rejected also append review_rejected (scope=code or scope=design). -->
 
 ## Review
-<!-- Code against spec.md and design.md: correctness, scope creep, security, maintainability. -->
+<!-- Code against the ticket criteria (ticket-context.md) and design.md: correctness, scope creep, security, maintainability. -->
 
 ## Risk signals matched (config/risk-rules.yaml)
 <!-- One line per matched signal with the evidence. Write "none" if nothing matched. -->

@@ -2,11 +2,11 @@
 """JSON interface for workflow state and commands.
 
   wf_api.py board                      the team board and the ticket list
-  wf_api.py state TICKET               one ticket: lanes, gates, files, next actions
+  wf_api.py state TICKET               one ticket: agents, gates, files, next actions
   wf_api.py file TICKET PATH           text of a file in the run folder
-  wf_api.py act                        JSON on stdin: {ticket, cmd, lane, repo, gate, text} -> runs a wf_run.py command
+  wf_api.py act                        JSON on stdin: {ticket, cmd, agent, repo, gate, text} -> runs a wf_run.py command
   wf_api.py intake TICKET              create the ticket run from config/backlog.yaml and mark it ready
-  wf_api.py acp LANE                   the ACP command for one lane (JSON list)
+  wf_api.py acp AGENT                   the ACP command for one agent (JSON list)
 All output is one JSON document on stdout.
 """
 import json
@@ -27,8 +27,10 @@ import yaml  # noqa: E402
 ROOT = S.ROOT
 PY = sys.executable
 NAME = re.compile(r"^[A-Za-z0-9._-]+$")
-LANES = ("planner", "dev", "qe", "reviewer", "inspect-adapt")
-TITLES = {"planner": "Planner (architecture)", "dev": "Dev", "qe": "QE", "reviewer": "Reviewer", "inspect-adapt": "Inspect & Adapt"}
+def agent_titles():
+    """Agent -> title, from config/agents.yaml."""
+    cfg = S.config()
+    return {n: cfg.agent("", n)["title"] for n in cfg.agent_names()}
 COMMANDS = ("ready", "approve", "reject", "answer", "retry", "accept", "deployed")
 
 
@@ -44,17 +46,17 @@ def ticket_dirs():
     return sorted(p.name for p in d.iterdir() if p.is_dir() and not p.name.startswith("_") and any(p.glob("run-*"))) if d.is_dir() else []
 
 
-def question_of(run, lane, repo=""):
-    unit = f"{lane}-{repo}" if repo else lane
+def question_of(run, agent, repo=""):
+    unit = f"{agent}-{repo}" if repo else agent
     for e in reversed(run.events()):
         d = e["detail"]
-        if e["event"] == "question_raised" and (e["actor"] == unit or (not repo and d.get("lane") == lane) or (repo and d.get("repo") == repo)):
+        if e["event"] == "question_raised" and (e["actor"] == unit or (not repo and d.get("agent") == agent) or (repo and d.get("repo") == repo)):
             return " ".join(str(d[k]) for k in ("question", "reason", "needed", "text", "blocker") if d.get(k))
     return ""
 
 
-def last_log(run_dir, lane, repo=""):
-    unit = f"{lane}-{repo}" if repo else lane
+def last_log(run_dir, agent, repo=""):
+    unit = f"{agent}-{repo}" if repo else agent
     logs = sorted((run_dir / "logs").glob(f"{unit}-a*.log"), key=lambda p: p.stat().st_mtime) if (run_dir / "logs").is_dir() else []
     return logs[-1].relative_to(run_dir).as_posix() if logs else ""
 
@@ -70,12 +72,12 @@ def tail(path, n=3000):
 def ticket_state(ticket):
     res = S.analyze(ticket)
     run = W.Run(ticket, res["run"])
-    for lane, rec in res["lanes"].items():
-        rec["question"] = question_of(run, lane) if rec["state"] == "blocked" else ""
-        rec["log"] = last_log(run.dir, lane)
+    for agent, rec in res["agents"].items():
+        rec["question"] = question_of(run, agent) if rec["state"] == "blocked" else ""
+        rec["log"] = last_log(run.dir, agent)
         for repo, r in (rec.get("repos") or {}).items():
-            r["log"] = last_log(run.dir, lane, repo)
-            r["question"] = question_of(run, lane, repo) if r["state"] == "blocked" else ""
+            r["log"] = last_log(run.dir, agent, repo)
+            r["question"] = question_of(run, agent, repo) if r["state"] == "blocked" else ""
     adir = run.dir / "artifacts"
     res["files"] = sorted(p.relative_to(run.dir).as_posix() for p in adir.rglob("*") if p.is_file() and p.name != ".gitkeep") if adir.is_dir() else []
     return res
@@ -85,16 +87,17 @@ RANK = {"idle": 0, "waiting": 1, "starting": 2, "working": 3, "waiting for you":
 
 
 def board():
-    """Each lane across all tickets and one-off tasks: an overall status and the lines behind it."""
-    lanes = {l: {"title": TITLES[l], "status": "idle", "lines": [], "ask_for": "", "questions": [], "gates": [], "live": None} for l in LANES}
-    cfg = S.load_yaml(ROOT / "config" / "lanes.yaml")
-    for l in LANES:
-        lanes[l]["ask_for"] = str(((cfg.get("lanes") or {}).get(l) or {}).get("ask_for", ""))
+    """Each agent across all tickets and one-off tasks: an overall status and the lines behind it."""
+    titles = agent_titles()
+    agents = {l: {"title": t, "status": "idle", "lines": [], "ask_for": "", "questions": [], "gates": [], "live": None} for l, t in titles.items()}
+    cfg = R.C.load().raw
+    for l in titles:
+        agents[l]["ask_for"] = str(((cfg.get("agents") or {}).get(l) or {}).get("ask_for", ""))
 
-    def add(lane, status, text, ticket="", task=""):
-        lanes[lane]["lines"].append({"status": status, "text": text, "ticket": ticket, "task": task})
-        if RANK[status] > RANK[lanes[lane]["status"]]:
-            lanes[lane]["status"] = status
+    def add(agent, status, text, ticket="", task=""):
+        agents[agent]["lines"].append({"status": status, "text": text, "ticket": ticket, "task": task})
+        if RANK[status] > RANK[agents[agent]["status"]]:
+            agents[agent]["status"] = status
 
     summaries = {}
     for t in ticket_dirs():
@@ -105,45 +108,44 @@ def board():
             continue
         arts = []
         for name, a in res["artifacts"].items():
-            if name == "changes":
-                arts += [{"name": f"changes/{r}", "status": x["status"], "reason": x.get("reason")} for r, x in (a.get("repos") or {}).items()]
+            if a.get("per_repo"):
+                arts += [{"name": f"{name}/{r}", "status": x["status"], "reason": x.get("reason")} for r, x in (a.get("repos") or {}).items()]
             else:
                 arts.append({"name": name, "status": a["status"], "reason": a.get("reason")})
         gates = [{"gate": g, "state": x["state"], "artifacts": x["artifacts"]} for g, x in (res.get("gates") or {}).items() if x["state"] != "not_required"]
         summaries[t] = {"status": res["status"], "detail": res["detail"], "artifacts": arts, "gates": gates}
         if res["status"] in ("Done", "Escalated"):
             continue
-        for lane, rec in res["lanes"].items():
+        for agent, rec in res["agents"].items():
             st = rec["state"]
-            if lane not in lanes or st in ("done", "disabled"):
+            if agent not in agents or st in ("done", "disabled"):
                 continue
             who = "blocked" if st == "blocked" else "failed" if st == "failed" else "working" if st == "working" else "starting" if st in ("ready", "stale") else "waiting"
-            add(lane, who, f"{t}: {rec['note'] or st}", ticket=t)
+            add(agent, who, f"{t}: {rec['note'] or st}", ticket=t)
             run = W.Run(t, res["run"])
             units = [(repo, x["state"]) for repo, x in (rec.get("repos") or {}).items()] or [("", st)]
             for repo, ust in units:
                 if ust == "blocked":
-                    lanes[lane].setdefault("questions", []).append({"ticket": t, "repo": repo, "question": question_of(run, lane, repo)})
+                    agents[agent].setdefault("questions", []).append({"ticket": t, "repo": repo, "question": question_of(run, agent, repo)})
                 if ust == "working":
-                    lg = last_log(run.dir, lane, repo)
+                    lg = last_log(run.dir, agent, repo)
                     if lg:
-                        lanes[lane]["live"] = {"unit": f"{t} {lane}{'-' + repo if repo else ''}", "text": tail(run.dir / lg)}
+                        agents[agent]["live"] = {"unit": f"{t} {agent}{'-' + repo if repo else ''}", "text": tail(run.dir / lg)}
         g = res.get("gates") or {}
-        if (g.get("planner") or {}).get("state") == "awaiting_approval":
-            add("planner", "waiting for you", f"{t}: approve the plan", ticket=t)
-            lanes["planner"]["gates"].append({"ticket": t, "gate": "planner", "cmd": "approve", "label": "plan"})
-        if (g.get("reviewer") or {}).get("state") == "awaiting_approval":
-            add("reviewer", "waiting for you", f"{t}: approve the review", ticket=t)
-            lanes["reviewer"]["gates"].append({"ticket": t, "gate": "reviewer", "cmd": "approve", "label": "review"})
-        if res["status"] == "Awaiting acceptance":
-            add("inspect-adapt", "waiting for you", f"{t}: accept the ticket", ticket=t)
-            lanes["inspect-adapt"]["gates"].append({"ticket": t, "gate": "", "cmd": "accept", "label": "ticket"})
+        for gl, gx in g.items():
+            if gx.get("state") == "awaiting_approval" and gl in agents:
+                add(gl, "waiting for you", f"{t}: approve {', '.join(gx['artifacts'])}", ticket=t)
+                agents[gl]["gates"].append({"ticket": t, "gate": gl, "cmd": "approve", "label": ", ".join(gx["artifacts"])})
+        last = list(res["agents"])[-1] if res["agents"] else None
+        if res["status"] == "Awaiting acceptance" and last in agents:
+            add(last, "waiting for you", f"{t}: accept the ticket", ticket=t)
+            agents[last]["gates"].append({"ticket": t, "gate": "", "cmd": "accept", "label": "ticket"})
     items = []
     for b in backlog():
         s = summaries.get(b["id"])
         items.append({"id": b["id"], "title": b["title"], "repos": b.get("repos", []), "state": s["status"] if s else "Not started", "detail": s["detail"] if s else "",
                       "artifacts": s.get("artifacts", []) if s else [], "gates": s.get("gates", []) if s else []})
-    return {"lanes": lanes, "tickets": items}
+    return {"agents": agents, "tickets": items}
 
 
 # ---------------------------------------------------------------- actions
@@ -167,16 +169,16 @@ def act(body):
     if not NAME.match(t) or cmd not in COMMANDS:
         return "refused: bad ticket or command"
     args = [PY, str(HERE / "wf_run.py"), cmd, "--ticket", t, "--by", "ui"]
-    lane, repo, text, gate = (str(body.get(k) or "") for k in ("lane", "repo", "text", "gate"))
-    if lane:
-        if lane not in LANES:
-            return "refused: bad lane"
-        args += ["--lane", lane]
+    agent, repo, text, gate = (str(body.get(k) or "") for k in ("agent", "repo", "text", "gate"))
+    if agent:
+        if agent not in agent_titles():
+            return "refused: bad agent"
+        args += ["--agent", agent]
     if repo:
         if not NAME.match(repo):
             return "refused: bad repo"
         args += ["--repo", repo]
-    if gate in ("planner", "reviewer"):
+    if gate in agent_titles():
         args += ["--gate", gate]
     if cmd == "answer":
         args += ["--text", text]
@@ -256,11 +258,11 @@ def intake(tid):
     return {"path": res["path"], "run": run_number}
 
 
-def acp(lane):
-    if lane not in LANES:
-        raise RuntimeError("bad lane")
+def acp(agent):
+    if agent not in agent_titles():
+        raise RuntimeError("bad agent")
     runner = R.load_cfg("runner.yaml")
-    fmt = {"lane": lane, "root": str(ROOT), "repo_path": "", "repo": "", "ticket": "", "run": 0}
+    fmt = {"agent": agent, "root": str(ROOT), "repo_path": "", "repo": "", "ticket": "", "run": 0}
     return R.acp_cmd(runner, fmt, "")
 
 

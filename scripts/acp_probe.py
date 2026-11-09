@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Experiment: drive ONE long-lived Copilot session over ACP (copilot --acp --stdio) like a lane would be.
+"""Experiment: drive ONE long-lived Copilot session over ACP (copilot --acp --stdio) like an agent would be.
 
   python scripts/acp_probe.py --agent wf-planner "Ask me which repo to use, wait for my answer, then say OK"
 
 It prints every message the agent sends. After each turn it asks YOU for a follow-up (empty line quits) and sends it
-to the SAME session, so you can see whether a lane could pause, ask, get an answer and continue with its context.
+to the SAME session, so you can see whether an agent could pause, ask, get an answer and continue with its context.
 Permission requests are auto-approved (this is a throw-away experiment). ACP is a public preview and may change.
 """
 import argparse

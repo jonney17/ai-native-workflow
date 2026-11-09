@@ -1,18 +1,19 @@
-# Repo registry shared by the team. Repo names must match the names used in tasks.md.
+# The team's repos: one entry per repo, in one file. Repo names must match the names used in tasks.md.
 # Keep it simple: two levels only (repo name, then key: value). The launcher reads it without a YAML library.
-# Local paths are NOT stored here, because they differ per developer: see repos.local.example.yaml.
+#   remote          clone URL
+#   default_branch  branch agents start from
+#   deploy          informational: how the repo is usually deployed (independent | after <repo>)
+#   local_path      where the repo is checked out. A relative path is under $WF_REPOS_ROOT, or else next to this workflow folder,
+#                   so "shop-api" means a sibling folder. On a machine where it differs, set WF_REPOS_ROOT (repo X is then
+#                   $WF_REPOS_ROOT/X), or put your own paths in config/repos.local.yaml (optional, git-ignored, same shape).
 repos:
   shop-api:                      # fake repos for the fake backlog (config/backlog.yaml); replace with the team's real repos
+    remote: git@github.com:your-org/shop-api.git
+    default_branch: main
     deploy: independent
+    local_path: shop-api
   shop-web:
+    remote: git@github.com:your-org/shop-web.git
+    default_branch: main
     deploy: after shop-api
-# Example (replace {} above with real entries):
-# repos:
-#   repo-a:
-#     remote: git@github.com:your-org/repo-a.git
-#     default_branch: main
-#     deploy: independent          # informational: how this repo is usually deployed
-#   repo-b:
-#     remote: git@github.com:your-org/repo-b.git
-#     default_branch: main
-#     deploy: after repo-a         # informational
+    local_path: shop-web

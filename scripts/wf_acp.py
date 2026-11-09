@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """One long-lived agent session over ACP (Agent Client Protocol), e.g. `copilot --acp --stdio`.
 
-A lane keeps its session open between turns: it can stop to ask a question, a person answers, and the answer is
-sent to the SAME session, so the lane continues with everything it already read. Newline-delimited JSON-RPC on stdio.
+An agent keeps its session open between turns: it can stop to ask a question, a person answers, and the answer is
+sent to the SAME session, so the agent continues with everything it already read. Newline-delimited JSON-RPC on stdio.
 """
 import json
 import os
@@ -72,7 +72,7 @@ class Session:
                 raise AcpError("the agent process ended")
             if method == "session/prompt" and self.idle_seconds and time.time() - self._last > self.idle_seconds:
                 self.proc.kill()
-                raise AcpError(f"no output from the agent for {self.idle_seconds} s; stopped it so the lane can be retried")
+                raise AcpError(f"no output from the agent for {self.idle_seconds} s; stopped it so the agent can be retried")
         return self._wait.pop(i)[1] or {}
 
     def _raw(self, text):

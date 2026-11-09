@@ -1,0 +1,9 @@
+# The Auditor: ONE agent for the whole team, separate from the ticket agents (scripts/wf_audit.py).
+# It looks at every ticket and audits each run whose status is in audit_when, into audits/<ticket>/run-<n>.md.
+# It only reads tickets: it never blocks, reworks or changes one. Edit here or in the playbook's Configure page.
+# How to audit is in the agent file; the first message of a session (which run, where to write) is fixed in scripts/wf_audit.py.
+instructions: wf-auditor     # .github/agents/<instructions>.agent.md
+model: ""                    # optional: a model for the audit sessions
+poll_seconds: 30             # how often it looks at the tickets while it runs
+audit_when: [Done]           # ticket statuses to audit (Done, Escalated)
+auto_start: false            # true = the playbook starts it when it opens; otherwise start it from the Auditor card

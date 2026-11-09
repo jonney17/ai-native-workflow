@@ -16,7 +16,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-KINDS = ("story", "chore", "spike")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import wf_config as C  # noqa: E402
 
 
 def now():
@@ -43,7 +44,7 @@ def context_story(ticket, run, prd, origin):
         "- Affected repos (first guess): <repos>\n\n"
         "## Ticket description\n\n<paste the ticket text>\n\n"
         "## Jira acceptance criteria and scenarios\n\n"
-        "One row per criterion or scenario. Keep the ids stable: they are carried into the spec and the test plan.\n"
+        "One row per criterion or scenario. Keep the ids stable: they are carried into the tasks and the test plan.\n"
         "If the ticket has none, write 'none provided'.\n\n"
         "| Id | Criterion or scenario (given / when / then) |\n"
         "|---|---|\n"
@@ -60,7 +61,7 @@ def context_chore(ticket, run, prd, origin):
         "- Affected repos (first guess): <repos>\n\n"
         "## Intent\n\n<why this work is worth doing, in a few sentences>\n\n"
         "## Done criteria\n\n"
-        "One row per criterion. Keep the ids stable: they are carried into the spec and the test plan.\n\n"
+        "One row per criterion. Keep the ids stable: they are carried into the tasks and the test plan.\n\n"
         "| Id | Done criterion (observable and testable) |\n"
         "|---|---|\n"
         "| C-1 | <text> |\n\n"
@@ -83,34 +84,30 @@ def context_spike(ticket, run, prd, origin):
 
 CONTEXT = {"story": context_story, "chore": context_chore, "spike": context_spike}
 
-# A spike has no spec, design, tasks, code or tests: it replaces the lanes, artifacts and acceptance blocks.
-SPIKE_BLOCKS = """\
-lanes:
-  planner:       { status: waiting }
-  inspect-adapt: { status: waiting, enabled: false }   # set enabled: true to run it for this spike
-# lane status: waiting | ready | working | blocked | done | stale | failed
-
-artifacts:
-  ticket-context.md:    { owner: system,        status: missing }
-  findings.md:          { owner: planner,       status: missing }
-  inspection-report.md: { owner: inspect-adapt, status: missing }
-# artifact status: missing | draft | ready | approved | rejected | stale
-
-acceptance:
-  policy: findings_review     # a human reads findings.md and accepts it, rejects it, or asks for more
-  accepted: null
-  signed_off_by: null
-"""
+def generated_blocks(kind):
+    """The agents: and artifacts: blocks of a new manifest, from config/agents.yaml."""
+    cfg = C.load()
+    out = ["agents:"]
+    for l in cfg.agents(kind):
+        out.append(f"  {l['name']}: {{ status: waiting" + (", repos: {}" if l["fan_out"] else "") + " }")
+    out += ["# agent status: waiting | ready | working | blocked | done | stale | failed", "", "artifacts:"]
+    for key, a in cfg.artifacts(kind).items():
+        out.append(f"  {key}: {{ owner: {a['owner']}, status: missing" + (", per_repo: {}" if a["per_repo"] else "") + " }")
+    out += ["# artifact status: missing | draft | ready | approved | rejected | stale",
+            "# each artifact also records: version, hash, inputs (name -> hash), approved_by", ""]
+    return out
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--ticket", required=True)
     ap.add_argument("--run", type=int, default=1)
-    ap.add_argument("--kind", choices=KINDS, default="story")
+    ap.add_argument("--kind", default="story", help="one of the kinds in config/agents.yaml (story, chore, spike, ...)")
     ap.add_argument("--origin", default="", help="chore and spike: tech-debt | ops | experiment | other")
     ap.add_argument("--prd", action="append", default=[], help="PRD requirement id, repeatable (stories)")
     args = ap.parse_args()
+    if args.kind not in C.load().kinds():
+        sys.exit(f"error: unknown kind {args.kind!r} (config/agents.yaml has: {', '.join(C.load().kinds())})")
 
     src = ROOT / "tickets" / "_template" / "run-1"
     dst = ROOT / "tickets" / args.ticket / f"run-{args.run}"
@@ -122,15 +119,15 @@ def main():
     manifest = dst / "manifest.yaml"
     out = []
     for line in manifest.read_text(encoding="utf-8").splitlines():
-        if args.kind == "spike" and line.startswith("lanes:"):
-            out.extend(SPIKE_BLOCKS.splitlines())
-            break  # the spike blocks replace everything from here to the end of the file
+        if line.startswith("# agents: and artifacts: are generated"):
+            out.extend(generated_blocks(args.kind))
+            continue
         if line.startswith("ticket: "):
             line = f"ticket: {args.ticket}"
         elif line.startswith("run: "):
             line = f"run: {args.run}"
         elif line.startswith("kind:"):
-            line = f"kind: {args.kind}                    # story | chore | spike"
+            line = f"kind: {args.kind}"
         elif line.startswith("origin:"):
             line = f'origin: "{args.origin}"'
         elif line.startswith("prd_refs:"):
@@ -140,14 +137,14 @@ def main():
     manifest.write_text("\n".join(out) + "\n", encoding="utf-8")
 
     (dst / "artifacts" / "ticket-context.md").write_text(
-        CONTEXT[args.kind](args.ticket, args.run, args.prd, args.origin), encoding="utf-8")
+        CONTEXT.get(args.kind, context_story)(args.ticket, args.run, args.prd, args.origin), encoding="utf-8")
 
     with open(dst / "events.log", "a", encoding="utf-8") as f:
         detail = {"ticket": args.ticket, "run": args.run, "kind": args.kind, "origin": args.origin, "prd_refs": args.prd}
         f.write(f"{now()}\tsystem\tticket_created\t{json.dumps(detail)}\n")
 
     print(f"created {dst}")
-    print("next: fill artifacts/ticket-context.md, mark it ready, then launch the planner lane")
+    print("next: fill artifacts/ticket-context.md, mark it ready, then launch the planner agent")
 
 
 if __name__ == "__main__":

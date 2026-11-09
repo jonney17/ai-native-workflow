@@ -1,5 +1,7 @@
-# Loop bounds. Exceeding the attempt limit marks the lane FAILED and escalates the ticket.
+# Loop bounds. Exceeding the attempt limit marks the agent FAILED and escalates the ticket.
 version: 1
-per_lane:
+per_run:
+  max_reworks: 3                    # how often one agent may send work back with the same event (design_gap, verify_failed, review_rejected); then it fails and the ticket is Escalated. 0 = unlimited
+per_agent:
   max_attempts: 3
   lease_minutes: 30                 # a crashed agent's lease expires and the work returns to the queue

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Start one lane session and record it in the run's events.log (lane_started, lane_exited).
+"""Start one agent session and record it in the run's events.log (agent_started, agent_exited).
 
 The orchestrator (wf_run.py) calls this; you can also call it by hand:
-  python scripts/wf_launch.py --ticket PROJ-123 --run 1 --lane dev --repo repo-a --attempt 1 -- copilot ...
+  python scripts/wf_launch.py --ticket PROJ-123 --run 1 --agent dev --repo repo-a --attempt 1 -- copilot ...
 The command runs from the workflow root. A repo's local path, when known, is passed in $WF_REPO_PATH.
 """
 import argparse
@@ -16,12 +16,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-LANES = ("planner", "qe", "dev", "reviewer", "inspect-adapt")  # keep in sync with config/lanes.yaml
-KIND_LANES = {  # keep in sync with kinds in config/lanes.yaml
-    "story": LANES,
-    "chore": LANES,
-    "spike": ("planner", "inspect-adapt"),
-}
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import wf_config as C  # noqa: E402  (agents and kinds come from config/agents.yaml)
 
 
 def now():
@@ -34,7 +30,7 @@ def log_event(events, actor, event, detail):
 
 
 def read_registry(path):
-    """Read config/repos.yaml or repos.local.yaml: repos -> name -> key: value (two levels only)."""
+    """Read config/repos.yaml (or the optional repos.local.yaml): repos -> name -> key: value (two levels only)."""
     repos = {}
     if not path.exists():
         return repos
@@ -56,15 +52,21 @@ def read_registry(path):
     return repos
 
 
-def resolve_repo(name, local):
-    """Local path of a repo: repos.local.yaml first, then $WF_REPOS_ROOT/<name>. None if not found."""
+def resolve_repo(name, registry, local=None):
+    """Local path of a repo, first one that exists: the private override config/repos.local.yaml (optional, git-ignored),
+    $WF_REPOS_ROOT/<name>, then `local_path` in config/repos.yaml (a relative path is under $WF_REPOS_ROOT, or else
+    next to the workflow folder). None if not found."""
+    base = os.environ.get("WF_REPOS_ROOT") or str(ROOT.parent)
     candidates = []
-    if local.get(name, {}).get("local_path"):
-        candidates.append(local[name]["local_path"])
+    if (local or {}).get(name, {}).get("local_path"):
+        candidates.append((local[name]["local_path"], base))
     if os.environ.get("WF_REPOS_ROOT"):
-        candidates.append(os.path.join(os.environ["WF_REPOS_ROOT"], name))
-    for c in candidates:
+        candidates.append((name, os.environ["WF_REPOS_ROOT"]))
+    if (registry or {}).get(name, {}).get("local_path"):
+        candidates.append((registry[name]["local_path"], base))
+    for c, b in candidates:
         p = Path(os.path.expandvars(os.path.expanduser(c)))
+        p = p if p.is_absolute() else Path(b) / p
         if p.is_dir():
             return p
     return None
@@ -82,8 +84,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--ticket", required=True)
     ap.add_argument("--run", type=int, default=1)
-    ap.add_argument("--lane", required=True, choices=LANES)
-    ap.add_argument("--repo", default="", help="for the dev lane: the repo this instance works on")
+    ap.add_argument("--agent", "--lane", dest="agent", required=True)
+    ap.add_argument("--repo", default="", help="for the dev agent: the repo this instance works on")
     ap.add_argument("--attempt", type=int, default=1)
     ap.add_argument("command", nargs=argparse.REMAINDER, help="command to run, after --")
     args = ap.parse_args()
@@ -92,10 +94,11 @@ def main():
     if not run_dir.is_dir():
         sys.exit(f"error: {run_dir} not found; create it with scripts/new_ticket.py")
     kind = read_kind(run_dir / "manifest.yaml")
-    if kind not in KIND_LANES:
+    cfg = C.load()
+    if kind not in cfg.kinds():
         sys.exit(f"error: unknown kind {kind!r} in manifest")
-    if args.lane not in KIND_LANES[kind]:
-        sys.exit(f"error: lane {args.lane!r} does not apply to a {kind} (allowed: {', '.join(KIND_LANES[kind])})")
+    if args.agent not in cfg.kind_agents(kind):
+        sys.exit(f"error: agent {args.agent!r} does not apply to a {kind} (allowed: {', '.join(cfg.kind_agents(kind))})")
     cmd = args.command[1:] if args.command[:1] == ["--"] else args.command
     if not cmd:
         sys.exit("error: no command given after --")
@@ -105,8 +108,8 @@ def main():
 
     registry = read_registry(ROOT / "config" / "repos.yaml")
     local = read_registry(ROOT / "config" / "repos.local.yaml")
-    paths = {n: found for n in registry if (found := resolve_repo(n, local)) is not None}
-    env = {"WF_TICKET": args.ticket, "WF_RUN": str(args.run), "WF_LANE": args.lane, "WF_ATTEMPT": str(args.attempt),
+    paths = {n: found for n in registry if (found := resolve_repo(n, registry, local)) is not None}
+    env = {"WF_TICKET": args.ticket, "WF_RUN": str(args.run), "WF_AGENT": args.agent, "WF_ATTEMPT": str(args.attempt),
            "WF_REPO_PATHS": json.dumps({k: str(v) for k, v in paths.items()})}
     if args.repo:
         env["WF_REPO"] = args.repo
@@ -114,14 +117,14 @@ def main():
             env["WF_REPO_PATH"] = str(paths[args.repo])
 
     events = run_dir / "events.log"
-    log_event(events, "launcher", "lane_started", {"kind": kind, "lane": args.lane, "repo": args.repo, "attempt": args.attempt})
+    log_event(events, "launcher", "agent_started", {"kind": kind, "agent": args.agent, "repo": args.repo, "attempt": args.attempt})
     started, code = time.time(), 1
     try:
         code = subprocess.call([exe] + cmd[1:], env={**os.environ, **env})
     except KeyboardInterrupt:
         code = 130
     finally:
-        log_event(events, "launcher", "lane_exited", {"lane": args.lane, "repo": args.repo, "returncode": code,
+        log_event(events, "launcher", "agent_exited", {"agent": args.agent, "repo": args.repo, "returncode": code,
                                                       "seconds": round(time.time() - started, 1)})
     sys.exit(code)
 

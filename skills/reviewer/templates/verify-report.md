@@ -15,9 +15,9 @@ Result: **PASS**
 
 ## Coverage matrix
 <!-- An AC with no passing test is a failure. -->
-| AC   | Repo | Test | Result |
+| Id   | Repo | Test | Result |
 |------|------|------|--------|
-| AC-1 | <repo> | test_ac1_... | pass |
+| J-1 | <repo> | test_j1_... | pass |
 
 ## Failures
 <!-- Only when the result is FAIL: one line per failing repo with its AC ids. Append verify_failed to events.log for each. -->

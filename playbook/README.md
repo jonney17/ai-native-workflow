@@ -1,6 +1,6 @@
 # Workflow playbook
 
-The local playbook displays ticket, lane, and artifact readiness and provides controls for the existing workflow commands.
+The local playbook displays ticket, agent, and artifact readiness and provides controls for the existing workflow commands.
 
 ## Start the playbook
 
@@ -31,11 +31,26 @@ To use a different port, pass it to the script and open the matching URL:
 .\playbook\start.ps1 -Port 8766
 ```
 
-The **Work items** panel opens automatically when active work items are present. You can collapse it into a narrow left rail on desktop to give the workflow more horizontal space; the playbook remembers your choice. On smaller screens the panel is a compact header above the workflow. **Remove** archives a work item, including its runs and artifacts, under `tickets/_archive/`. Restore it from the panel's **Archived** list; work items with active commands cannot be archived.
+The playbook has three tabs:
 
-Select a backlog item in the **Work items** panel, then use the top-right **Start workflow** button to create its run, generate `ticket-context.md` from the backlog title, description, criteria, and repos, mark the context ready, and start or resume all workers. Existing hand-edited context is preserved. For non-backlog tickets, the button starts or resumes the selected ticket when its context is ready. The button reflects the selected workflow's running, complete, and archived state; backlog status stays synchronized while the playbook is open. Workers proceed through available lanes and wait at human gates or missing prerequisites.
+- **Jira board**: one card per ticket assigned to you (`assignee` in `config/backlog.yaml`, the fake board for now, matched against `WF_USER` or your OS user name; **All** shows every ticket), in columns Not started, Running, Done and Archived. **Start working** creates the ticket's run, writes `ticket-context.md` from the ticket, marks it ready, starts the agent workers and opens the Ticket runs tab. A Done ticket can be archived (**Archive**) and an archived one restored (**Restore**).
+- **Ticket runs**: one tab per running ticket (Done ones leave this list), with the Auditor card on top. **Start / resume workflow** and **Stop** sit at the top right. The canvas shows the agents and a card for every artifact; drag anything to arrange it (remembered in the browser, **Reset layout** undoes it). Hover or click a node to see its dotted connectors: input (artifact to agent, blue) and output (agent to artifact, green), amber while an agent waits. Hover an agent's status to read its latest log, or the **Live log** icon for the whole run (it follows the newest line until you scroll up). **Needs your decision** appears only when a person must approve, answer, confirm a deploy or accept.
+- **Configuration**: agents and their artifacts, the agents and done condition of each kind, and the Auditor's settings (the Configure page, also at `/config`).
 
-The **Refresh** button and automatic polling update each workflow-lane card and artifact-flow node in place, including lane and repo statuses, while preserving the diagram layout and any text entered in human-action controls.
+Automatic polling updates the agent cards and artifact nodes in place, including agent and repo statuses, while preserving the canvas layout and any text entered in human-action controls.
+
+## Configuration tab
+
+The **Configuration** tab (also `/config`) shows agents with what they need and produce, their instructions file, whether a person approves
+their output and whether they run once per repo; per kind, which agents run and when a ticket is done. **Start blank** clears the
+agents. The page checks the setup as you edit and saves only a valid one; the agent cards and the artifact flow follow it.
+
+## Auditor
+
+The Auditor card shows the team's single Auditor (`scripts/wf_audit.py watch`). It is off by default: press **Start** to run it
+and **Stop** to end it, or tick *Start it automatically* under Auditor on the Configure page (`auto_start` in
+`config/auditor.yaml`). While it runs it audits each finished ticket into `audits/<ticket>/run-<n>.md`; the card shows
+**View audit** and **Audit again** per ticket.
 
 ## Human decisions
 

@@ -3,3 +3,4 @@ __pycache__/
 config/repos.local.yaml
 demo/workspace*/
 tasks/
+locks/

@@ -1,0 +1,121 @@
+# Agents and artifacts: the single source of truth for who does what. Edit here or in the playbook's Configure page.
+#
+# Artifacts are central. An agent never calls another agent: it starts when every artifact it `requires` has the
+# required status (default: ready; `@approved` = a human gate passed) and none is stale, and it `produces` artifacts.
+# A changed input makes everything built from it stale, and the agents that produce those run again by themselves.
+#
+# Agent fields:
+#   title, stage   names shown in the UI; `stage` is the ticket status while this is the first unfinished agent
+#   requires       artifacts it needs (`name@approved` to need a passed gate)
+#   produces       artifacts it writes; "name/<repo>/" is one folder per repo (needs fan_out: repo)
+#   fan_out: repo  one agent instance per repo of the ticket (the repos come from a gate's sets_repos_from)
+#   gate           a human approves `artifacts` together before agents that need them @approved can start
+#     when: risk_flagged     only when the agent's report says `human_required: true` (see decision_in)
+#     sets_repos_from: F     on approval, copy the repos and the Release section from artifact F
+#     feedback_to: F         on rejection, write the reason into artifact F so the agent redoes the work
+#   ask_for        what a person must give the agent for a one-off request (chat)
+#   instructions   the Copilot agent file it runs: .github/agents/<instructions>.agent.md (default wf-<name>)
+#   model, args    optional: a model and extra Copilot options for this agent
+version: 2
+statuses: [missing, draft, ready, approved, rejected, stale]
+system_artifacts: [ticket-context.md]     # written at intake, not by an agent
+
+agents:
+  planner:
+    title: Architect
+    stage: Planning
+    purpose: "Ground the ticket in the code: decide the design and split the work per repo. The ticket already has the acceptance criteria (J-n or C-n)."
+    ask_for: the ticket or topic (text or link), its PRD refs, and which repos it may touch
+    requires: [ticket-context.md]
+    produces: [design.md, tasks.md]
+    gate:
+      artifacts: [design.md, tasks.md]   # approved together
+      sets_repos_from: tasks.md
+      feedback_to: ticket-context.md
+
+  qe:
+    title: QE
+    stage: Building
+    purpose: Prove the behavior.
+    ask_for: the spec or acceptance criteria to test, and the repo
+    requires: [ticket-context.md, tasks.md@approved]
+    produces: [test-plan.md]          # it may also write tests/<repo>/ (not tracked)
+
+  dev:
+    title: Dev
+    stage: Building
+    purpose: Build the change, one task per repo.
+    ask_for: the repo, the task, and the spec or acceptance criteria to build against
+    fan_out: repo
+    requires: [ticket-context.md, design.md@approved, tasks.md@approved]
+    produces: ["changes/<repo>/"]
+
+  reviewer:
+    title: Reviewer
+    stage: In review
+    purpose: Verify, then review.
+    ask_for: what to review (repo and branch or diff) and the criteria to review against
+    requires: ["changes/*", test-plan.md]
+    produces: [verify-report.md, review-report.md]
+    gate:
+      artifacts: [review-report.md]
+      when: risk_flagged           # see config/risk-rules.yaml
+      decision_in: review-report.md
+
+# Work kinds. `story` is the default. The manifest's `kind` picks one.
+#   agents       which agents run, in order
+#   done_when  a ticket is Done when every agent is done and every gate passed, and then:
+#                artifacts: [..]      these artifacts reach this status too (name@approved, else ready)
+#                deploy: true         CI/CD deploys the run's repos (needs a gate with sets_repos_from)
+#                person_accepts: true a person accepts the ticket at the end
+#   overrides  per-agent changes for this kind (any agent field)
+kinds:
+  story:
+    agents: [planner, qe, dev, reviewer]
+    done_when: {deploy: true, person_accepts: true}
+    source_of_work: Jira criteria (J-n) and PRD requirement ids
+  chore:                              # tech debt, refactor, upgrade
+    agents: [planner, qe, dev, reviewer]
+    done_when: {deploy: true, person_accepts: true}
+    source_of_work: intent and done criteria (C-n) in ticket-context.md, written by the requester
+  spike:                              # investigation that answers a question
+    agents: [planner]
+    done_when: {artifacts: [findings.md@approved], deploy: false, person_accepts: false}
+    overrides:
+      planner:
+        stage: Investigating
+        produces: [findings.md]
+        gate: {artifacts: [findings.md]}  # a human reads the findings and accepts, rejects or asks for more
+
+# Optional: what an artifact is built from, when it is not simply its agent's `requires`.
+# The orchestrator records these input hashes when it marks an artifact ready.
+artifact_inputs:
+  design.md: [ticket-context.md]
+  tasks.md: [ticket-context.md, design.md]
+  test-plan.md: [ticket-context.md, tasks.md]
+  changes: [ticket-context.md, design.md, tasks.md]
+  verify-report.md: [test-plan.md, changes]
+  review-report.md: [test-plan.md, changes]
+
+# Problems an agent can raise in events.log. `from`: the agents allowed to raise it. `rejects`: the artifacts it sends
+# back, so the agents that produce them redo the work ("name/<repo>" = the repos named in the event, else all).
+# question_raised (the agent waits for a person) and escalate (the agent fails) are built in.
+events:
+  design_gap:      {from: [qe, dev, reviewer], rejects: [design.md, tasks.md]}   # unclear or untestable criteria are a question_raised to the ticket owner instead
+  verify_failed:   {from: [reviewer], rejects: ["changes/<repo>"]}
+  review_rejected: {from: [reviewer], rejects: [review-report.md, "changes/<repo>"]}
+
+# The Auditor is not an agent: it has its own config, config/auditor.yaml.
+
+# Not an agent: merge and deploy are plain CI/CD after every agent is done and every gate passed.
+system_steps:
+  deploy:
+    runner: ci_cd
+    order: "from the Release section copied at the gate with sets_repos_from (deploy_order is independent or ordered)"
+    on_partial_failure: stop at the first failure, escalate, and record what is already merged or deployed (rollback is manual)   # PLACEHOLDER
+
+rules:
+  - Agents write artifacts and append proposed events; only the orchestrator changes statuses.
+  - One writer per artifact, through a lease that expires.
+  - A changed input hash marks every dependent artifact stale and re-queues its agent.
+  - Ticket status is derived from agent and artifact statuses; nobody sets it by hand.

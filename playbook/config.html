@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Configure agents</title>
+<style>
+:root {
+  color-scheme: dark;
+  --line:#2d3558; --text:#e9ecf8; --mute:#8d96bb; --blue:#5b9dff; --green:#41d392; --amber:#ffb454; --red:#ff6b7d;
+}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(1100px 600px at 85% -15%,#5b9dff18,transparent 65%),#0a0c18;color:var(--text);font:14px/1.5 Inter,"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.shell{max-width:1320px;margin:auto;padding:22px 24px 60px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.title{display:flex;align-items:center;gap:12px}
+.brandmark{display:grid;place-items:center;width:36px;height:36px;border:1px solid #5b9dff77;border-radius:11px;background:#5b9dff1a;color:var(--blue);font-weight:800}
+h1{font-size:20px;margin:0}
+.sub{color:var(--mute);font-size:13px;margin:0 0 18px 48px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{border:1px solid #35406b;border-radius:9px;padding:8px 13px;background:#22294a;color:var(--text);font-size:13px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:#2b345d}
+.btn.primary{background:var(--blue);color:#08101d;border-color:var(--blue)}
+.btn.ghost{background:transparent}
+.btn.icon{padding:3px 8px;background:transparent;color:var(--mute);border-color:transparent}
+.btn.icon:hover{color:var(--text);border-color:#35406b}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.layout{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(300px,1fr);gap:18px;align-items:start}
+.side{position:sticky;top:14px;display:grid;gap:14px}
+.card{background:linear-gradient(145deg,#191d33f2,#14182a);border:1px solid var(--line);border-radius:14px}
+.agent{padding:12px 14px;margin-bottom:10px;border-left:3px solid var(--c,#5b9dff)}
+.agent-top{display:flex;align-items:center;gap:6px}
+.agent-top .name{flex:1;font-size:15px;font-weight:700;background:transparent;border:1px solid transparent;border-radius:7px;padding:3px 6px;color:var(--text);min-width:0}
+.agent-top .name:hover,.agent-top .name:focus{border-color:var(--line);outline:none}
+.agent-top .id{font:11px "Cascadia Code",Consolas,monospace;color:var(--mute)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+label.f{display:block;font-size:11px;color:var(--mute);margin-bottom:3px}
+.field{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:#0e1120;color:var(--text);outline:none}
+.field:focus{border-color:var(--blue)}
+.mono{font-family:"Cascadia Code",Consolas,monospace;font-size:12px}
+.opts{display:flex;gap:18px;flex-wrap:wrap;align-items:center;margin-top:9px;font-size:13px}
+.opts label{display:inline-flex;gap:6px;align-items:center;color:#d4d9f2}
+details.more{margin-top:8px}
+details.more summary{cursor:pointer;color:var(--mute);font-size:12px;width:max-content}
+.add{width:100%;justify-content:center;padding:11px;border-style:dashed;background:transparent;color:var(--mute)}
+.add:hover{color:var(--text)}
+.panel{padding:14px 16px}
+.panel h2{font-size:14px;margin:0 0 8px}
+.tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.tab{padding:4px 12px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--mute);font-size:12px;font-weight:600}
+.tab.on{background:#5b9dff22;color:var(--text);border-color:#5b9dff88}
+.check-row{display:flex;align-items:center;gap:8px;padding:4px 2px;font-size:13px}
+.check-row .grow{flex:1}
+.sep{border:0;border-top:1px solid var(--line);margin:10px 0}
+.flow{display:grid;gap:5px}
+.step{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px}
+.step b{padding:2px 9px;border-radius:7px;border:1px solid var(--line);background:#ffffff0a}
+.art{font:11px "Cascadia Code",Consolas,monospace;padding:1px 6px;border-radius:6px;background:#0e1120;border:1px solid var(--line);color:#c4cbea}
+.art.ok{border-color:#41d39266;color:#9ff0c9}
+.status{display:flex;align-items:center;gap:8px;font-size:13px;padding:10px 12px;border-radius:10px;margin-bottom:14px;border:1px solid var(--line)}
+.status.ok{background:#41d39210;border-color:#41d39244;color:#bff3d9}
+.status.bad{background:#ff6b7d10;border-color:#ff6b7d55;color:#ffc1c8}
+.status ul{margin:4px 0 0;padding-left:18px}
+.msg{font-size:13px;padding:10px 12px;border-radius:10px;margin-bottom:14px;background:#5b9dff12;border:1px solid #5b9dff35;color:#c7d8ff}
+.hint{color:var(--mute);font-size:12px}
+table.t{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
+table.t td,table.t th{padding:4px 6px;border-bottom:1px solid var(--line);text-align:left}
+table.t th{color:var(--mute);font-weight:500}
+.embedded .shell{padding:0 2px 30px}.embedded .back,.embedded .brandmark{display:none}.embedded h1{font-size:18px}
+.empty{padding:30px;text-align:center;color:var(--mute)}
+@media(max-width:960px){.layout{grid-template-columns:1fr}.side{position:static}.row{grid-template-columns:1fr}.shell{padding:16px}.sub{margin-left:0}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="topbar">
+    <div class="title"><div class="brandmark">W</div><h1>Configure agents</h1></div>
+    <div class="actions">
+      <a class="btn ghost back" href="/">← Playbook</a>
+      <button class="btn ghost" id="blank" type="button">Start blank</button>
+      <button class="btn ghost" id="discard" type="button">Discard</button>
+      <button class="btn primary" id="save" type="button">Save</button>
+    </div>
+  </header>
+  <p class="sub">Each agent starts when the artifacts it needs are ready, and produces artifacts for the next agents.</p>
+  <div id="msg"></div>
+  <div id="status"></div>
+  <div class="layout">
+    <main>
+      <div id="agents"></div>
+      <button class="btn add" id="add" type="button">+ Add agent</button>
+      <details class="card panel more" style="margin-top:14px">
+        <summary>Advanced</summary>
+        <div id="advanced"></div>
+      </details>
+    </main>
+    <aside class="side">
+      <section class="card panel">
+        <div class="tabs" id="kinds"></div>
+        <h2>Agents in this kind</h2>
+        <div id="kind-agents"></div>
+        <hr class="sep">
+        <h2>Done when</h2>
+        <div class="hint" style="margin-bottom:4px">Every agent is done and every approval is given, then:</div>
+        <div id="done"></div>
+      </section>
+      <section class="card panel">
+        <h2>Flow</h2>
+        <div class="flow" id="flow"></div>
+      </section>
+      <section class="card panel" id="auditor">
+        <h2>Auditor <span class="hint">· one agent for all tickets, outside the flow</span></h2>
+        <div id="auditor-form"></div>
+      </section>
+    </aside>
+  </div>
+</div>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const COLORS = ['#5b9dff','#3dd6d0','#41d392','#ffb454','#a78bfa','#ff8fab','#f6d365','#7ee8fa'];
+const split = (text) => String(text || '').split(',').map(x => x.trim()).filter(Boolean);
+const join = (arr) => (arr || []).join(', ');
+const keyOf = (t) => { const n = String(t).split('@')[0].trim(); return n.includes('<repo>') || /\/./.test(n.replace(/\/$/, '')) ? n.split('/')[0] : n.replace(/\/$/, ''); };
+const slug = (t) => String(t).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').replace(/^[^a-z]+/, '').slice(0, 32) || 'agent';
+if (new URLSearchParams(location.search).get('embedded')) document.documentElement.classList.add('embedded');
+let saved = '', state = null, info = {}, kind = '', summary = null, timer = 0, newAgents = new Set();
+
+async function api(url, body) {
+  const res = await fetch(url, body ? {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)} : undefined);
+  const data = await res.json();
+  if (!res.ok && res.status !== 422) throw new Error(data.error || `Request failed (${res.status})`);
+  return data;
+}
+async function load() {
+  const data = await api('/api/config');
+  info = data;
+  state = {agents:data.agents || {}, kinds:data.kinds || {}, artifact_inputs:data.artifact_inputs || {}, events:data.events || {}, auditor:data.auditor || {}};
+  saved = JSON.stringify(state);
+  newAgents = new Set();
+  if (!state.kinds[kind]) kind = Object.keys(state.kinds)[0] || '';
+  render(); check();
+}
+const dirty = () => JSON.stringify(state) !== saved;
+function changed(full) { if (full) render(); else renderSide(); $('#save').textContent = dirty() ? 'Save •' : 'Save'; clearTimeout(timer); timer = setTimeout(check, 300); }
+function artifacts() {
+  const out = new Set(info.system_artifacts || ['ticket-context.md']);
+  Object.values(state.agents).forEach(l => (l.produces || []).forEach(t => out.add(keyOf(t))));
+  return [...out];
+}
+function kindDef() { return state.kinds[kind] || (state.kinds[kind] = {agents: []}); }
+
+// ---------- agents (named agents in the config file)
+function render() { renderAgents(); renderSide(); renderAdvanced(); renderAuditor(); }
+
+// ---------- the Auditor (global, separate from the agents)
+function renderAuditor() {
+  const a = state.auditor, agents = info.available_instructions || [];
+  const when = a.audit_when || [];
+  $('#auditor-form').innerHTML = `<div class="row" style="margin-top:0">
+      <div><label class="f">Instructions</label><select class="field" data-a="instructions">${[...new Set([...agents, a.instructions])].filter(Boolean).map(x => `<option ${x === a.instructions ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></div>
+      <div><label class="f">Model (optional)</label><input class="field mono" data-a="model" value="${esc(a.model || '')}" placeholder="default"></div>
+    </div>
+    <div class="check-row" style="margin-top:8px">Audit tickets that are
+      ${(info.audit_statuses || ['Done']).map(s => `<label class="check-row"><input type="checkbox" data-when="${esc(s)}" ${when.includes(s) ? 'checked' : ''}> ${esc(s)}</label>`).join('')}</div>
+    <div class="check-row">Check every <input class="field" style="width:80px" type="number" min="5" data-a="poll_seconds" value="${esc(a.poll_seconds ?? 30)}"> seconds while it runs</div>
+    <label class="check-row"><input type="checkbox" data-a="auto_start" ${a.auto_start ? 'checked' : ''}> Start it automatically when the playbook opens</label>
+    <div class="hint">Off: start and stop it from the Auditor card in the playbook.</div>`;
+}
+$('#auditor-form').addEventListener('change', (e) => {
+  const t = e.target, a = state.auditor;
+  if (t.dataset.when) { const s = t.dataset.when; a.audit_when = t.checked ? [...new Set([...(a.audit_when || []), s])] : (a.audit_when || []).filter(x => x !== s); }
+  else if (t.dataset.a === 'auto_start') a.auto_start = t.checked;
+  else if (t.dataset.a === 'poll_seconds') a.poll_seconds = Number(t.value);
+  else if (t.dataset.a) a[t.dataset.a] = t.value;
+  else return;
+  changed(false);
+});
+function renderAgents() {
+  const names = Object.keys(state.agents);
+  const arts = artifacts();
+  const agents = [...new Set([...(info.available_instructions || []), ...names.map(n => state.agents[n].instructions || state.agents[n].agent || `wf-${n}`)])];
+  $('#agents').innerHTML = `<datalist id="arts">${arts.map(a => `<option value="${esc(a)}">`).join('')}</datalist>` + (names.length ? names.map((n, i) => {
+    const l = state.agents[n], g = l.gate;
+    const agent = l.instructions || l.agent || `wf-${n}`;
+    const exists = (info.available_instructions || []).includes(agent);
+    const pick = (field, label) => `<div><label class="f">${label}</label><select class="field" data-g="${field}" data-l="${esc(n)}"><option value="">—</option>${arts.map(a => `<option ${g && keyOf(g[field] || '') === a ? 'selected' : ''}>${esc(a)}</option>`).join('')}</select></div>`;
+    return `<article class="card agent" style="--c:${COLORS[i % COLORS.length]}">
+      <div class="agent-top">
+        <input class="name" data-k="title" data-l="${esc(n)}" value="${esc(l.title || n)}" aria-label="Agent name">
+        <span class="id">${esc(n)}</span>
+        <button class="btn icon" data-up="${esc(n)}" ${i === 0 ? 'disabled' : ''} title="Move up">↑</button>
+        <button class="btn icon" data-down="${esc(n)}" ${i === names.length - 1 ? 'disabled' : ''} title="Move down">↓</button>
+        <button class="btn icon" data-del="${esc(n)}" title="Remove agent">✕</button>
+      </div>
+      <div class="row">
+        <div><label class="f">Needs</label><input class="field mono" list="arts" data-list="requires" data-l="${esc(n)}" value="${esc(join(l.requires))}" placeholder="tasks.md@approved"></div>
+        <div><label class="f">Produces</label><input class="field mono" data-list="produces" data-l="${esc(n)}" value="${esc(join(l.produces))}" placeholder="report.md"></div>
+      </div>
+      <div class="opts">
+        <label>Instructions <select class="field" style="width:auto;padding:4px 8px" data-instr="${esc(n)}">${agents.map(a => `<option ${a === agent ? 'selected' : ''}>${esc(a)}</option>`).join('')}</select>
+          ${exists ? '' : '<span class="hint">(created on save)</span>'}</label>
+        <label><input type="checkbox" data-gate="${esc(n)}" ${g ? 'checked' : ''}> A person approves its output</label>
+        <label><input type="checkbox" data-fan="${esc(n)}" ${l.fan_out === 'repo' ? 'checked' : ''}> One per repo</label>
+      </div>
+      <details class="more"><summary>More</summary>
+        <div class="row">
+          <div><label class="f">Status shown while it works</label><input class="field" data-k="stage" data-l="${esc(n)}" value="${esc(l.stage || '')}" placeholder="${esc(l.title || n)}"></div>
+          <div><label class="f">Model (optional)</label><input class="field mono" data-k="model" data-l="${esc(n)}" value="${esc(l.model || '')}" placeholder="default"></div>
+          <div><label class="f">What it does</label><input class="field" data-k="purpose" data-l="${esc(n)}" value="${esc(l.purpose || '')}"></div>
+          <div><label class="f">What to give it in a chat</label><input class="field" data-k="ask_for" data-l="${esc(n)}" value="${esc(l.ask_for || '')}"></div>
+          ${g ? `${pick('sets_repos_from', 'On approval, take the repos from')}${pick('feedback_to', 'On rejection, write the reason into')}
+          <div><label class="f">Approval needed</label><select class="field" data-risk="${esc(n)}"><option value="">always</option><option value="risk" ${g.when === 'risk_flagged' ? 'selected' : ''}>only when its report says human_required: true</option></select></div>` : ''}
+        </div>
+      </details>
+    </article>`;
+  }).join('') : '<div class="card empty">No agents yet. Add the first one: it usually needs <code>ticket-context.md</code>.</div>');
+}
+function reorder(name, by) {
+  const names = Object.keys(state.agents), i = names.indexOf(name), j = i + by;
+  if (j < 0 || j >= names.length) return;
+  [names[i], names[j]] = [names[j], names[i]];
+  state.agents = Object.fromEntries(names.map(x => [x, state.agents[x]]));
+  Object.values(state.kinds).forEach(k => (k.agents || []).sort((a, b) => names.indexOf(a) - names.indexOf(b)));
+}
+function rename(old, title) {   // a new agent's id follows its name until it is saved
+  let id = slug(title), n = 2;
+  while (id !== old && state.agents[id]) id = `${slug(title)}-${n++}`;
+  if (id === old) return old;
+  state.agents = Object.fromEntries(Object.entries(state.agents).map(([k, v]) => [k === old ? id : k, v]));
+  Object.values(state.kinds).forEach(k => { k.agents = (k.agents || []).map(x => x === old ? id : x); });
+  const l = state.agents[id];
+  delete l.agent; if (!l.instructions || l.instructions === `wf-${old}`) delete l.instructions;
+  l.produces = (l.produces || []).map(p => p === `${old}-report.md` ? `${id}-report.md` : p);
+  newAgents.delete(old); newAgents.add(id);
+  return id;
+}
+$('#agents').addEventListener('input', (e) => {
+  const t = e.target, l = state.agents[t.dataset.l];
+  if (!l) return;
+  if (t.dataset.k) { if (t.value) l[t.dataset.k] = t.value; else delete l[t.dataset.k]; }
+  else if (t.dataset.list) l[t.dataset.list] = split(t.value);
+  else return;
+  changed(false);
+});
+$('#agents').addEventListener('change', (e) => {
+  const t = e.target;
+  if (t.dataset.k === 'title' && newAgents.has(t.dataset.l)) { rename(t.dataset.l, t.value); return changed(true); }
+  if (t.dataset.list || t.dataset.k) return renderAgents();
+  if (t.dataset.instr) { const n = t.dataset.instr; delete state.agents[n].agent; if (t.value === `wf-${n}`) delete state.agents[n].instructions; else state.agents[n].instructions = t.value; return changed(true); }
+  if (t.dataset.gate) { const l = state.agents[t.dataset.gate]; if (t.checked) l.gate = {artifacts: (l.produces || []).map(keyOf)}; else delete l.gate; return changed(true); }
+  if (t.dataset.fan) { const l = state.agents[t.dataset.fan]; if (t.checked) { l.fan_out = 'repo'; l.produces = (l.produces || []).map(p => p.includes('<repo>') ? p : `${keyOf(p).replace(/\.md$/, '')}/<repo>/`); } else { delete l.fan_out; l.produces = (l.produces || []).map(p => p.includes('<repo>') ? keyOf(p) : p); } return changed(true); }
+  if (t.dataset.g) { const g = state.agents[t.dataset.l].gate; if (t.value) g[t.dataset.g] = t.value; else delete g[t.dataset.g]; return changed(false); }
+  if (t.dataset.risk !== undefined) { const g = state.agents[t.dataset.risk].gate; if (t.value) { g.when = 'risk_flagged'; g.decision_in = (g.artifacts || [])[0]; } else { delete g.when; delete g.decision_in; } return changed(false); }
+});
+$('#agents').addEventListener('click', (e) => {
+  const t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.up) { reorder(t.dataset.up, -1); changed(true); }
+  if (t.dataset.down) { reorder(t.dataset.down, 1); changed(true); }
+  if (t.dataset.del) {
+    const n = t.dataset.del;
+    if (!confirm(`Remove "${state.agents[n].title || n}"? Its agent file is kept.`)) return;
+    delete state.agents[n];
+    Object.values(state.kinds).forEach(k => { k.agents = (k.agents || []).filter(x => x !== n); if (k.overrides) delete k.overrides[n]; });
+    Object.values(state.events).forEach(ev => { ev.from = (ev.from || []).filter(x => x !== n); });
+    changed(true);
+  }
+});
+$('#add').addEventListener('click', () => {
+  const names = Object.keys(state.agents);
+  const last = names.length ? state.agents[names[names.length - 1]] : null;
+  let n = 1; while (state.agents[`agent-${n}`]) n++;
+  const id = `agent-${n}`;
+  state.agents[id] = {title: `Agent ${n}`, requires: last ? (last.produces || []).map(t => keyOf(t) + (last.gate ? '@approved' : '')) : [...(info.system_artifacts || ['ticket-context.md'])], produces: [`${id}-report.md`]};
+  newAgents.add(id);
+  if (kind) kindDef().agents = [...(kindDef().agents || []), id];
+  changed(true);
+  const inputs = document.querySelectorAll('.agent .name');
+  inputs[inputs.length - 1]?.select();
+});
+$('#blank').addEventListener('click', () => {
+  if (!confirm('Start blank? This removes every agent from the page (nothing is saved until you press Save).')) return;
+  state.agents = {}; state.artifact_inputs = {}; state.events = {};
+  Object.values(state.kinds).forEach(k => { k.agents = []; delete k.overrides; k.done_when = {deploy: false, person_accepts: true}; delete k.deploy; delete k.accept_when; });
+  newAgents = new Set();
+  changed(true);
+});
+
+// ---------- kinds: agents and done condition
+function renderSide() {
+  $('#kinds').innerHTML = Object.keys(state.kinds).map(k => `<button class="tab ${k === kind ? 'on' : ''}" data-kind="${esc(k)}">${esc(k)}</button>`).join('');
+  const k = kindDef(), on = k.agents || [];
+  $('#kind-agents').innerHTML = Object.keys(state.agents).map(n =>
+    `<label class="check-row"><input type="checkbox" data-in="${esc(n)}" ${on.includes(n) ? 'checked' : ''}><span class="grow">${esc(state.agents[n].title || n)}</span></label>`
+  ).join('') || '<div class="hint">Add an agent first.</div>';
+  const d = k.done_when || {};
+  const deploy = d.deploy ?? (k.deploy !== false), accept = d.person_accepts ?? (k.accept_when !== 'gates_approved');
+  $('#done').innerHTML = `<label class="check-row"><input type="checkbox" data-done="deploy" ${deploy ? 'checked' : ''}> CI/CD deploys the repos</label>
+    <label class="check-row"><input type="checkbox" data-done="person_accepts" ${accept ? 'checked' : ''}> A person accepts the ticket</label>
+    <label class="f" style="margin-top:6px">And these artifacts are ready (add @approved to need approval)</label>
+    <input class="field mono" list="arts" data-done="artifacts" value="${esc(join(d.artifacts))}" placeholder="optional">`;
+  renderFlow();
+}
+function setDone(field, value) {
+  const k = kindDef();
+  k.done_when = Object.assign({deploy: k.deploy !== false, person_accepts: k.accept_when !== 'gates_approved'}, k.done_when || {});
+  delete k.deploy; delete k.accept_when;
+  if (field === 'artifacts' && !value.length) delete k.done_when.artifacts; else k.done_when[field] = value;
+}
+$('#kinds').addEventListener('click', (e) => { const t = e.target.closest('[data-kind]'); if (t) { kind = t.dataset.kind; renderSide(); } });
+$('#kind-agents').addEventListener('change', (e) => {
+  const n = e.target.dataset.in; if (!n) return;
+  const k = kindDef(), order = Object.keys(state.agents);
+  k.agents = e.target.checked ? [...(k.agents || []), n].sort((a, b) => order.indexOf(a) - order.indexOf(b)) : (k.agents || []).filter(x => x !== n);
+  changed(false);
+});
+$('#done').addEventListener('change', (e) => { const f = e.target.dataset.done; if (f && f !== 'artifacts') { setDone(f, e.target.checked); changed(false); } });
+$('#done').addEventListener('input', (e) => { if (e.target.dataset.done === 'artifacts') { setDone('artifacts', split(e.target.value)); $('#save').textContent = 'Save •'; clearTimeout(timer); timer = setTimeout(check, 300); } });
+function renderFlow() {
+  const views = summary?.kinds?.[kind]?.agent_views || {};
+  const agents = (kindDef().agents || []).filter(n => state.agents[n]);
+  const tag = (a, ok) => `<span class="art ${ok ? 'ok' : ''}">${esc(a)}</span>`;
+  const rows = agents.map(n => {
+    const v = views[n], l = state.agents[n];
+    const needs = v ? v.requires.map(([a, lv]) => tag(a + (lv ? '@' + lv : ''), lv === 'approved')) : (l.requires || []).map(a => tag(a));
+    const makes = v ? v.produces.map(a => tag(a + (v.per_repo.includes(a) ? '/<repo>' : ''), v.gate && v.gate.artifacts.includes(a))) : (l.produces || []).map(a => tag(a));
+    return `<div class="step">${needs.join('') || '<span class="hint">—</span>'} → <b>${esc(l.title || n)}${v?.gate ? ' ✋' : ''}</b> → ${makes.join('') || '<span class="hint">—</span>'}</div>`;
+  });
+  const d = summary?.kinds?.[kind]?.done_when;
+  if (d && agents.length) rows.push(`<div class="step"><b>Done</b> <span class="hint">${[d.deploy ? 'after deploy' : '', d.person_accepts ? 'a person accepts' : 'automatically', ...(d.artifacts || []).map(([a, lv]) => a + (lv ? '@' + lv : ''))].filter(Boolean).join(' · ')}</span></div>`);
+  $('#flow').innerHTML = rows.join('') + (agents.length ? '<div class="hint" style="margin-top:4px">✋ a person approves · green = approved</div>' : '<div class="hint">No agents in this kind.</div>');
+}
+
+// ---------- advanced: built from, and problems agents can raise
+function renderAdvanced() {
+  const arts = artifacts().filter(a => !(info.system_artifacts || []).includes(a));
+  $('#advanced').innerHTML = `<p class="hint">Built from: when one of these changes, the artifact is redone. Blank = what its agent needs.</p>
+    <table class="t">${arts.map(a => `<tr><td class="mono">${esc(a)}</td><td><input class="field mono" data-in-of="${esc(a)}" value="${esc(join(state.artifact_inputs[a]))}"></td></tr>`).join('')}</table>
+    <p class="hint" style="margin-top:14px">Problems an agent can report, who may report them, and what they send back.</p>
+    <table class="t"><tr><th>Problem</th><th>Reported by</th><th>Sends back</th><th></th></tr>
+    ${Object.entries(state.events).map(([ev, r]) => `<tr><td class="mono">${esc(ev)}</td>
+      <td><input class="field mono" data-ev="${esc(ev)}" data-f="from" value="${esc(join(r.from))}"></td>
+      <td><input class="field mono" data-ev="${esc(ev)}" data-f="rejects" value="${esc(join(r.rejects))}"></td>
+      <td><button class="btn icon" data-ev-del="${esc(ev)}">✕</button></td></tr>`).join('')}
+    <tr><td><input class="field mono" id="new-ev" placeholder="new_problem"></td><td colspan="3"><button class="btn ghost" id="add-ev">Add</button></td></tr></table>`;
+}
+$('#advanced').addEventListener('input', (e) => {
+  const t = e.target;
+  if (t.dataset.inOf) { const v = split(t.value); if (v.length) state.artifact_inputs[t.dataset.inOf] = v; else delete state.artifact_inputs[t.dataset.inOf]; changed(false); }
+  if (t.dataset.ev) { state.events[t.dataset.ev][t.dataset.f] = split(t.value); changed(false); }
+});
+$('#advanced').addEventListener('click', (e) => {
+  const t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.evDel) { delete state.events[t.dataset.evDel]; changed(true); }
+  if (t.id === 'add-ev') { const n = $('#new-ev').value.trim().replace(/[^a-z0-9_]/gi, '_'); if (n && !['question_raised', 'escalate'].includes(n)) { state.events[n] = {from: [], rejects: []}; changed(true); } }
+});
+
+// ---------- check and save
+async function check() {
+  try {
+    const data = await api('/api/config/check', state);
+    summary = data.summary;
+    const bad = data.problems || [];
+    $('#status').innerHTML = bad.length
+      ? `<div class="status bad"><div><b>Fix before saving:</b><ul>${bad.map(p => `<li>${esc(p)}</li>`).join('')}</ul></div></div>`
+      : `<div class="status ok">✓ Every agent can start and finish.</div>`;
+    $('#save').disabled = bad.length > 0 || !dirty();
+    renderFlow();
+  } catch (error) { $('#status').innerHTML = `<div class="status bad">${esc(error.message)}</div>`; }
+}
+$('#save').addEventListener('click', async () => {
+  $('#save').disabled = true;
+  try {
+    const r = await api('/api/config', state);
+    if (!r.saved) { $('#msg').innerHTML = `<div class="msg">Not saved: ${r.problems.map(esc).join('; ')}</div>`; return; }
+    $('#msg').innerHTML = `<div class="msg">Saved.${r.auditor_saved ? ' Auditor settings saved (a running Auditor uses them after a restart).' : ''}${r.created_files.length ? ` New agent files: ${r.created_files.map(esc).join(', ')} (placeholders: describe the real task in them).` : ''} New tickets use it now; a running workflow picks it up when you start or resume it.</div>`;
+    await load();
+    if (window.parent !== window) window.parent.postMessage({type: 'config-saved'}, location.origin);
+    if (location.hash) document.querySelector(location.hash)?.scrollIntoView();
+  } catch (error) { $('#msg').innerHTML = `<div class="msg">${esc(error.message)}</div>`; }
+});
+$('#discard').addEventListener('click', () => { if (!dirty() || confirm('Discard your changes?')) { $('#msg').innerHTML = ''; load(); } });
+window.addEventListener('beforeunload', (e) => { if (state && dirty()) { e.preventDefault(); e.returnValue = ''; } });
+load().then(() => { if (location.hash) document.querySelector(location.hash)?.scrollIntoView({block: 'start'}); }).catch(error => { $('#msg').innerHTML = `<div class="msg">${esc(error.message)}</div>`; });
+</script>
+</body>
+</html>

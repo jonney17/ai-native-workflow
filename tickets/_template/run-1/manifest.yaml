@@ -1,41 +1,22 @@
 # Ticket run manifest. Written by the orchestrator only; agents never edit it.
-# Ticket status is DERIVED from the lane and artifact statuses below. Do not store it here.
+# Ticket status is DERIVED from the agent and artifact statuses below. Do not store it here.
 ticket: PROJ-000
 run: 1
-kind: story                    # story | chore | spike (set by new_ticket.py --kind)
+kind: story                    # one of the kinds in config/agents.yaml (set by new_ticket.py --kind)
 origin: ""                    # chore and spike: tech-debt | ops | experiment | other
 prd_refs: []                  # for example [PRD-12#R4]
 
 
-lanes:
-  planner:       { status: waiting }
-  qe:            { status: waiting }
-  dev:           { status: waiting, repos: {} }   # repo -> status
-  reviewer:      { status: waiting }
-  inspect-adapt: { status: waiting }
-# lane status: waiting | ready | working | blocked | done | stale | failed
+# agents: and artifacts: are generated from config/agents.yaml by scripts/new_ticket.py
 
-artifacts:
-  ticket-context.md:    { owner: system,        status: missing }
-  spec.md:              { owner: planner,       status: missing }
-  design.md:            { owner: planner,       status: missing }
-  tasks.md:             { owner: planner,       status: missing }
-  test-plan.md:         { owner: qe,            status: missing }
-  changes:              { owner: dev,           status: missing, per_repo: {} }
-  verify-report.md:     { owner: reviewer,      status: missing }
-  review-report.md:     { owner: reviewer,      status: missing }
-  acceptance-report.md: { owner: system,        status: missing }
-  inspection-report.md: { owner: inspect-adapt, status: missing }
-# artifact status: missing | draft | ready | approved | rejected | stale
-# each artifact also records: version, hash, inputs (name -> hash), approved_by
+repos: []                      # this run's repos, copied at the gate with sets_repos_from (e.g. tasks.md)
 
 release:
   deploy_order: independent    # independent | ordered, copied from the Release section of tasks.md
   sequence: []                  # for ordered: repos in deploy order
   repos: {}                     # repo -> merged | deployed | failed (from CI/CD events)
 
-review:
-  human_required: null   # the Reviewer's risk check (config/risk-rules.yaml): true or false. null = not decided yet
+gates: {}   # per gated agent, e.g. reviewer: {human_required: true}, copied from its report (when: risk_flagged)
 
 acceptance:
   policy: tbd

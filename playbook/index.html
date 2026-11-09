@@ -17,7 +17,8 @@ button,input,select,textarea{font:inherit}
 button{cursor:pointer}
 button:disabled{opacity:.48;cursor:wait}
 .shell{max-width:1540px;margin:auto;padding:28px 30px 60px}
-.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:26px}
+.topbar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin-bottom:26px}
+.topbar .tabbar{justify-self:center}
 .brand{display:flex;align-items:center;gap:12px;font-weight:800;letter-spacing:.08em}
 .brandmark{display:grid;place-items:center;width:38px;height:38px;border:1px solid #5b9dff77;border-radius:12px;background:#5b9dff1a;color:var(--blue)}
 .brand small{display:block;color:var(--mute);font-size:11px;font-weight:600;letter-spacing:.16em}
@@ -76,18 +77,49 @@ h1{font-size:clamp(24px,3vw,34px);line-height:1.15;letter-spacing:-.04em;margin:
 .status.planning,.status.building,.status.verifying,.status.in_review,.status.deploying,.status.investigating,.status.awaiting_findings_review,.status.awaiting_acceptance,.status.needs_input{color:var(--blue);border-color:#5b9dff55;background:#5b9dff10}
 .grid-head{display:flex;align-items:center;justify-content:space-between;margin:24px 2px 11px}
 .grid-head h2{font-size:15px;margin:0}.grid-head .hint{font-size:12px;color:var(--mute)}
-.lanes{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
-.lane{padding:15px;border-radius:13px;background:#171b30cc;border:1px solid var(--line);min-height:132px;position:relative;overflow:hidden}
-.lane:before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--lane-color,var(--blue))}
-.lane[data-lane-node]{cursor:help}
-.lane-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.lane h3{margin:0;font-size:14px}.lane p{font-size:11px;color:var(--mute);margin:10px 0 0;line-height:1.5}
-.lane .status{font-size:9px;padding:4px 7px}
-.lane-log-popover{position:fixed;z-index:20;width:min(1000px,calc(100vw - 32px));max-height:62vh;padding:14px;border:1px solid #53618f;border-radius:13px;background:#0d1020;box-shadow:0 20px 60px #000b;pointer-events:auto}
-.lane-log-head{display:flex;justify-content:space-between;align-items:center;gap:12px;color:var(--text);font-size:12px;font-weight:750}
-.lane-log-path{color:var(--mute);font-size:11px;font-weight:400}
-.lane-log-text{max-height:calc(62vh - 52px);overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#080a14;border:1px solid var(--line);border-radius:8px;padding:12px;margin:9px 0 0;color:#d4daf4;font:12px/1.5 "Cascadia Code",Consolas,monospace}
-.lane-busy{display:inline-flex;align-items:center;gap:7px}
+.agents{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.agent{padding:15px;border-radius:13px;background:#171b30cc;border:1px solid var(--line);min-height:132px;position:relative;overflow:hidden}
+.agent:before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--agent-color,var(--blue))}
+.agent[data-agent-node]{cursor:help}
+.agent-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.agent h3{margin:0;font-size:14px}.agent p{font-size:11px;color:var(--mute);margin:10px 0 0;line-height:1.5}
+.agent .status{font-size:9px;padding:4px 7px}
+.agent-log-popover{position:fixed;z-index:20;width:min(1000px,calc(100vw - 32px));max-height:62vh;padding:14px;border:1px solid #53618f;border-radius:13px;background:#0d1020;box-shadow:0 20px 60px #000b;pointer-events:auto}
+.agent-log-head{display:flex;justify-content:space-between;align-items:center;gap:12px;color:var(--text);font-size:12px;font-weight:750}
+.agent-log-path{color:var(--mute);font-size:11px;font-weight:400}
+.agent-log-text{max-height:calc(62vh - 52px);overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#080a14;border:1px solid var(--line);border-radius:8px;padding:12px;margin:9px 0 0;color:#d4daf4;font:12px/1.5 "Cascadia Code",Consolas,monospace}
+.human-steps{margin:0 0 12px;padding-left:20px}.human-steps li{margin-bottom:10px}
+.hub-viewport{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:#101426aa}
+.hub{position:relative;min-width:920px;min-height:460px}
+.hub-links{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.hub-center{position:absolute;transform:translate(-50%,-50%);width:270px;padding:12px;border:1px solid #3a4470;border-radius:16px;background:#12162b;box-shadow:0 10px 30px #05060d88;z-index:2}
+.hub-center h4{margin:0 0 8px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+.art-row{display:flex;align-items:center;gap:8px;padding:8px 11px;margin-bottom:8px;border:1px solid var(--line);border-radius:10px;background:#171b30;font:12px/1.3 "Cascadia Code",Consolas,monospace;transition:background .15s,border-color .15s;box-shadow:0 4px 12px #05060d55}
+.art-row:last-child{margin-bottom:0}
+.art-row .dot{flex:none;width:8px;height:8px;border-radius:50%;background:#596486}
+.art-row.ready,.art-row.approved{border-color:#41d39277}.art-row.draft{border-color:#a78bfa77}.art-row.stale{border-color:#ffb45499}.art-row.rejected{border-color:#ff6b7d99}
+.art-row.ready .dot,.art-row.approved .dot{background:var(--green)}.art-row.draft .dot{background:var(--violet)}.art-row.stale .dot{background:var(--amber)}.art-row.rejected .dot{background:var(--red)}
+.art-row a{color:inherit;text-decoration:none;border-bottom:1px dotted #a9b5df}.art-row .st{margin-left:auto;font:10px Inter,sans-serif;color:var(--mute);text-transform:uppercase;letter-spacing:.04em}
+.art-row.missing{opacity:.7}
+.art-row.needed{background:#1d2a55;border-color:#5b9dff}.art-row.made{background:#17332f;border-color:#41d392}
+.hub{user-select:none;-webkit-user-select:none}
+.hub .art-row{position:absolute;transform:translate(-50%,-50%);width:230px;margin:0;z-index:2;cursor:grab;touch-action:none}
+.hub .agent{cursor:grab;touch-action:none}
+.hub .dragging{cursor:grabbing;z-index:5;box-shadow:0 14px 34px #000a}
+.hub .dim{opacity:.35}.hub .pinned{outline:2px solid #ffffff55;outline-offset:3px}
+.agent{position:absolute;transform:translate(-50%,-50%);width:210px;padding:11px 13px;border:1.5px solid var(--c);border-radius:12px;background:#151a30;z-index:2;box-shadow:0 8px 22px #05060d77}
+.agent h3{margin:0 0 6px;font-size:14px;color:var(--c)}
+.agent-status{display:flex;align-items:flex-start;gap:8px;padding:4px 0}.agent-status [data-agent-node]{cursor:help}
+.run-live{display:inline-flex;align-items:center;gap:7px;padding:3px 11px;border:1px solid var(--line);border-radius:999px;font-size:11px;font-weight:700;color:var(--mute);cursor:help;background:#ffffff06}
+.run-live .dot{width:8px;height:8px;border-radius:50%;background:#596486}.run-live.on{color:var(--text);border-color:#41d39255}.run-live.on .dot{background:var(--green);animation:livepulse 1.4s ease-in-out infinite}
+@keyframes livepulse{0%,100%{opacity:1;box-shadow:0 0 0 0 #41d39266}50%{opacity:.55;box-shadow:0 0 0 5px #41d39200}}
+.agent-status .status{flex:none;font-size:9px;padding:4px 7px}
+.agent-note{font-size:11px;color:var(--mute);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.agent-io{margin-top:6px;font-size:10.5px;color:var(--mute);line-height:1.5;overflow-wrap:anywhere}.agent-io b{color:#a9b5df;font-weight:700;margin-right:4px}
+.agent .changes{margin-top:6px}
+.hub-legend{display:flex;gap:18px;flex-wrap:wrap;color:var(--mute);font-size:11.5px;margin:-3px 2px 10px}
+.hub-legend svg{vertical-align:-2px;margin-right:5px}
+.agent-busy{display:inline-flex;align-items:center;gap:7px}
 .busy-dots{display:inline-flex;gap:3px;align-items:center}
 .busy-dots i{width:4px;height:4px;border-radius:50%;background:currentColor;animation:busy-pulse 1s infinite ease-in-out}
 .busy-dots i:nth-child(2){animation-delay:.15s}.busy-dots i:nth-child(3){animation-delay:.3s}
@@ -117,7 +149,7 @@ h1{font-size:clamp(24px,3vw,34px);line-height:1.15;letter-spacing:-.04em;margin:
 .changes{width:100%;border-top:1px solid #ffffff0d;margin-top:9px;padding-top:8px}
 .actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
 .action-card{padding:15px}.action-card h3{font-size:13px;margin:0 0 5px}.action-card p{color:var(--mute);font-size:11px;margin:0 0 12px}
-.btn{border:1px solid #35406b;border-radius:9px;padding:9px 12px;background:#22294a;color:var(--text);font-size:12px;font-weight:700}
+.btn{text-decoration:none;display:inline-flex;align-items:center;border:1px solid #35406b;border-radius:9px;padding:9px 12px;background:#22294a;color:var(--text);font-size:12px;font-weight:700}
 .btn:hover{background:#2b345d;border-color:#5b9dff99}
 .btn.primary{background:#5b9dff;color:#08101d;border-color:#5b9dff}.btn.primary:hover{background:#77adff}
 .btn.subtle{background:transparent}
@@ -147,6 +179,44 @@ h1{font-size:clamp(24px,3vw,34px);line-height:1.15;letter-spacing:-.04em;margin:
 .history summary{cursor:pointer;padding:12px 14px;color:var(--mute);font-size:12px;font-weight:700}
 .history[open] summary{border-bottom:1px solid var(--line)}
 .history .jobs{padding:0 12px 12px}
+.auditor-card{padding:16px 18px;margin-bottom:16px;border-left:3px solid #a78bfa}.auditor-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.auditor-head h2{font-size:15px;margin:0}.auditor-head .grow{flex:1}.audit-list{display:grid;gap:6px;margin-top:10px}.audit-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px}.audit-row strong{min-width:90px}.audit-row a{color:#c7d8ff}
+.tabbar{display:flex;gap:4px;padding:4px;border:1px solid var(--line);border-radius:12px;background:#ffffff06}
+.tabbar button{border:0;background:transparent;color:var(--mute);font-weight:700;font-size:13px;padding:8px 16px;border-radius:9px}
+.tabbar button[aria-selected="true"]{background:#5b9dff22;color:var(--text);box-shadow:inset 0 0 0 1px #5b9dff66}
+.tab-page[hidden],.top-actions[hidden],.runs-view[hidden]{display:none!important}
+.runs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-top:6px}
+.run-card{padding:16px 18px;display:flex;flex-direction:column;gap:9px;cursor:pointer;transition:border-color .15s,transform .15s}
+.run-card:hover{border-color:#5b9dff77;transform:translateY(-1px)}
+.run-card .key{font:12px "Cascadia Code",Consolas,monospace;color:var(--blue);font-weight:700}
+.run-card h3{margin:0;font-size:15px;line-height:1.35}.run-card .meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.run-card .foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto;padding-top:6px}
+.jira-head .btn{padding:8px 16px}.runs-split{display:grid;grid-template-columns:240px minmax(0,1fr);gap:22px;align-items:start;margin-top:6px}
+.run-tabs{display:grid;gap:6px;position:sticky;top:20px}
+.run-tab{display:block;width:100%;text-align:left;border:1px solid var(--line);border-left:3px solid transparent;border-radius:11px;background:#ffffff05;color:var(--text);padding:10px 12px}
+.run-tab:hover{background:#242b52}.run-tab[aria-selected="true"]{background:#5b9dff1f;border-color:#5b9dff66;border-left-color:var(--blue)}
+.run-tab .status{font-size:10px;padding:3px 8px}.run-tab-wrap{display:grid;gap:4px}.run-archive{justify-self:end;padding:3px 10px;font-size:11px}
+.run-tab strong{display:block;font-size:13px}.run-tab span{display:block;font-size:11px;color:var(--mute);margin-top:2px}
+.jira-cols{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;align-items:start}
+.jira-col{display:grid;gap:12px;align-content:start;padding:12px;border:1px solid var(--line);border-radius:16px;background:#ffffff05}
+.jira-col>h3{margin:2px 4px 2px;font-size:13px;letter-spacing:.04em;color:var(--mute);display:flex;justify-content:space-between}
+@media(max-width:1100px){.jira-cols{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:850px){.runs-split,.jira-cols{grid-template-columns:1fr}.run-tabs{position:static}}
+.detail-bar{display:flex;align-items:center;gap:10px;margin:0 0 14px}.detail-bar .grow{flex:1}
+@media(max-width:850px){.topbar{grid-template-columns:1fr;gap:12px}}
+.jira-card .hint{font-size:12px;color:var(--mute)}
+.jira-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 2px 14px}
+.jira-head h2{margin:0;font-size:18px}.jira-head .grow{flex:1}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{border:0;background:transparent;color:var(--mute);padding:6px 12px;font-size:12px;font-weight:700}
+.seg button.on{background:#5b9dff22;color:var(--text)}
+.jira-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.jira-card{padding:16px 18px;display:flex;flex-direction:column;gap:9px}
+.jira-card .key{font:12px "Cascadia Code",Consolas,monospace;color:var(--blue);font-weight:700}
+.jira-card h3{margin:0;font-size:15px;line-height:1.35}
+.jira-card p{margin:0;color:var(--mute);font-size:13px}
+.jira-card .meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.jira-card .foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto;padding-top:6px}
+.config-frame{width:100%;height:calc(100vh - 120px);min-height:600px;border:0;border-radius:14px;background:transparent}
 .footer{margin-top:28px;text-align:center;color:#646d91;font-size:11px}
 @media(max-width:850px){.shell{padding:18px 14px 40px}.layout,.layout.sidebar-collapsed{grid-template-columns:1fr}.sidebar,.sidebar-collapsed .sidebar{position:static;padding:18px}.sidebar-collapsed .panel-toggle{padding:0}.sidebar-collapsed .panel-toggle-meta{flex-direction:row;gap:9px}.sidebar-collapsed .panel-toggle-title{writing-mode:initial;transform:none}.sidebar-collapsed #ticket-panel-toggle-label{display:inline}.sidebar-collapsed .panel-toggle-icon{font-size:18px}.ticket-list{grid-template-columns:repeat(auto-fit,minmax(130px,1fr));max-height:180px}.create{margin-top:12px}.hero-head{display:block}.hero-head>.status{margin-top:12px}}
 </style>
@@ -155,43 +225,39 @@ h1{font-size:clamp(24px,3vw,34px);line-height:1.15;letter-spacing:-.04em;margin:
 <div class="shell">
   <header class="topbar">
     <div class="brand"><div class="brandmark">W</div><div>WORKFLOW <small>PLAYBOOK · LOCAL CONTROL ROOM</small></div></div>
-    <div class="top-actions"><span class="online"><i></i> Connected to local runner</span><button class="btn primary" id="start-workflow" data-action="start" type="button" disabled title="Select a work item to start its workflow">Start workflow</button><button class="btn subtle" id="refresh">Refresh</button></div>
+    <nav class="tabbar" role="tablist" aria-label="Playbook sections">
+      <button role="tab" data-tab="jira" aria-selected="true">Jira board</button>
+      <button role="tab" data-tab="workflow" aria-selected="false">Ticket runs</button>
+      <button role="tab" data-tab="config" aria-selected="false">Configuration</button>
+    </nav>
+    <div></div>
   </header>
-  <div class="layout">
-    <aside class="panel sidebar">
-      <button class="panel-toggle" id="ticket-panel-toggle" type="button" aria-expanded="false" aria-controls="work-items-content">
-        <span class="panel-toggle-meta"><span class="panel-toggle-title">Work items</span><span id="ticket-count">0</span><span id="ticket-panel-toggle-label">Show</span><span class="panel-toggle-icon" id="ticket-panel-toggle-icon" aria-hidden="true">›</span></span>
-      </button>
-      <div id="work-items-content" hidden>
-        <details class="backlog-items" open>
-          <summary>Backlog <span id="backlog-count">0</span></summary>
-          <div class="backlog-list" id="backlog-list"></div>
-        </details>
-        <div class="ticket-list" id="ticket-list"></div>
-        <details class="archived-items">
-          <summary>Archived <span id="archived-count">0</span></summary>
-          <div class="archived-list" id="archived-list"></div>
-        </details>
-        <form class="create" id="create-form">
-          <div class="section-label">Create work item</div>
-          <label class="field-label" for="new-ticket">Ticket ID</label>
-          <input class="field" id="new-ticket" name="ticket" required maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9._\-]*" placeholder="PROJ-123">
-          <label class="field-label" for="new-kind">Work kind</label>
-          <div class="form-row"><select class="field" id="new-kind"><option value="story">Story</option><option value="chore">Chore</option><option value="spike">Spike</option></select><button class="btn primary" type="submit">Create</button></div>
-        </form>
+  <section class="tab-page" id="tab-jira">
+    <div class="jira-head"><h2 id="jira-title">My tickets</h2><span class="hint" id="jira-user"></span><span class="grow"></span>
+      <div class="seg" id="jira-filter"><button data-filter="mine" class="on">Assigned to me</button><button data-filter="all">All</button></div></div>
+    <div class="jira-grid" id="jira-cards"></div>
+  </section>
+  <section class="tab-page" id="tab-config" hidden><iframe class="config-frame" id="config-frame" title="Workflow configuration"></iframe></section>
+  <section class="tab-page" id="tab-workflow" hidden>
+    <section id="auditor"></section>
+    <div class="jira-head"><h2>Running tickets</h2><span class="hint" id="run-count"></span><span class="grow"></span>
+      <button class="btn danger" id="stop-workflow" type="button" disabled title="Stop all agents working on this ticket">Stop</button>
+      <button class="btn primary" id="start-workflow" data-action="start" type="button" disabled>Start workflow</button></div>
+    <div class="runs-split">
+      <div>
+        <nav class="run-tabs" id="run-tabs" role="tablist" aria-label="Running tickets"></nav>
       </div>
-    </aside>
-    <main class="main">
-      <section id="overview"></section>
-      <section id="board"></section>
-      <section id="action-area"></section>
-      <section id="job-area"></section>
-    </main>
-  </div>
+      <div id="run-detail">
+        <section id="overview"></section>
+        <section id="board"></section>
+        <section id="action-area"></section>
+      </div>
+    </div>
+  </section>
 </div>
-<div id="lane-log-popover" class="lane-log-popover" role="tooltip" hidden>
-  <div class="lane-log-head"><span id="lane-log-title"></span><span id="lane-log-path" class="lane-log-path"></span></div>
-  <pre id="lane-log-text" class="lane-log-text"></pre>
+<div id="agent-log-popover" class="agent-log-popover" role="tooltip" hidden>
+  <div class="agent-log-head"><span id="agent-log-title"></span><span id="agent-log-path" class="agent-log-path"></span></div>
+  <pre id="agent-log-text" class="agent-log-text"></pre>
 </div>
 <script>
 const $ = (selector) => document.querySelector(selector);
@@ -200,10 +266,19 @@ const stateClass = (value) => String(value || 'missing').toLowerCase().replace(/
 let selected = new URLSearchParams(location.search).get('ticket') || '';
 let current = null, knownTickets = [], backlogTickets = [], archivedTickets = [], activeJobs = [], confirmationMessage = '';
 let artifactRefreshRequest = 0;
-let laneLogRequest = 0, laneLogTimer = 0, laneLogHideTimer = 0, hoveredLaneNode = null;
-const WORK_ITEMS_EXPANDED_KEY = 'wf-work-items-expanded-v2';
-const laneNames = {planner:'Planner', qe:'QE', dev:'Dev', reviewer:'Reviewer', 'inspect-adapt':'Inspect & Adapt'};
-const laneColors = {planner:'#5b9dff', qe:'#3dd6d0', dev:'#41d392', reviewer:'#ffb454', 'inspect-adapt':'#a78bfa'};
+let agentLogRequest = 0, agentLogTimer = 0, agentLogHideTimer = 0, hoveredAgentNode = null;
+// Agents (called agents in the config file), their names and colors come from config/agents.yaml (GET /api/config)
+let agentNames = {}, agentColors = {}, flowConfig = null;
+const PALETTE = ['#5b9dff','#3dd6d0','#41d392','#ffb454','#a78bfa','#ff8fab','#f6d365','#7ee8fa'];
+async function loadConfig() {
+  flowConfig = await request('/api/config');
+  agentNames = {}; agentColors = {};
+  Object.entries(flowConfig.summary.agents || {}).forEach(([name, agent], i) => {
+    agentNames[name] = agent.title || name;
+    agentColors[name] = agent.color || PALETTE[i % PALETTE.length];
+  });
+}
+function gateDef(kind, agent) { return flowConfig?.summary?.kinds?.[kind]?.agent_views?.[agent]?.gate || null; }
 
 async function request(url, options) {
   const response = await fetch(url, options);
@@ -218,44 +293,54 @@ function button(label, action, extra = '', cls = '') {
 function actionCard(title, description, contents) {
   return `<article class="card action-card"><h3>${esc(title)}</h3><p>${esc(description)}</p>${contents}</article>`;
 }
-function renderTickets() {
-  $('#ticket-count').textContent = knownTickets.length;
-  $('#ticket-list').innerHTML = knownTickets.length ? knownTickets.map(item =>
-    `<div class="ticket-entry">
-      <button class="ticket-link ${item.ticket === selected ? 'active' : ''}" data-ticket="${esc(item.ticket)}">
-        <strong>${esc(item.ticket)}</strong><span>${esc(item.kind || 'item')} · ${esc(item.status || 'unknown')}</span>
-      </button>
-      <button class="btn danger ticket-remove" type="button" data-remove-ticket="${esc(item.ticket)}" aria-label="Remove ${esc(item.ticket)}" title="Archive this work item">Remove</button>
-    </div>`).join('') : '<div class="empty">No work items yet.<br>Create one to begin.</div>';
+function renderTickets() {   // Ticket runs tab: one vertical tab per ticket that has a run
+  $('#run-count').textContent = knownTickets.length ? `${knownTickets.length} with a run` : '';
+  $('#run-tabs').innerHTML = knownTickets.length ? knownTickets.map(item => {
+    const jira = backlogTickets.find(x => x.ticket === item.ticket) || {};
+    return `<div class="run-tab-wrap"><button class="run-tab" role="tab" type="button" data-ticket="${esc(item.ticket)}" aria-selected="${item.ticket === selected}">
+      <strong>${esc(item.ticket)}</strong><span>${esc(jira.title || item.kind || '')}</span><div style="margin-top:7px">${pill(item.status || 'unknown')}</div></button></div>`;
+  }).join('') : '<div class="hint">No ticket is running yet. Start one from the Jira board.</div>';
+  $('#run-detail').hidden = !knownTickets.length;
 }
-function renderBacklog() {
-  $('#backlog-count').textContent = backlogTickets.length;
-  $('#backlog-list').innerHTML = backlogTickets.length ? backlogTickets.map(item => {
-    const detail = item.archived ? 'Restore this work item to start it.'
-      : item.running ? 'Workflow running…'
-      : item.detail || item.state;
-    return `<button class="backlog-entry ${item.ticket === selected ? 'selected' : ''}" type="button" data-backlog-ticket="${esc(item.ticket)}" aria-pressed="${item.ticket === selected}">
-      <strong>${esc(item.ticket)} · ${esc(item.title)}</strong>
-      <span class="backlog-description">${esc(item.description)}${item.repos.length ? `<br>Repos: ${esc(item.repos.join(', '))}` : ''}<br>${esc(detail)}</span>
-    </button>`;
-  }).join('') : '<div class="empty">No backlog items configured.</div>';
+let jiraFilter = 'mine', jiraUser = '';
+function renderBacklog() {   // the Jira board tab: cards grouped into Not started / Running / Archived (fake backlog for now)
+  const mine = backlogTickets.filter(item => item.mine);
+  const items = jiraFilter === 'mine' ? mine : backlogTickets;
+  $('#jira-title').textContent = jiraFilter === 'mine' ? 'My tickets' : 'All tickets';
+  $('#jira-user').textContent = jiraUser ? `· ${jiraUser}` : '';
+  $('#jira-filter').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.filter === jiraFilter));
+  const card = item => {
+    const started = item.has_run;
+    const finished = item.state === 'Done' && started;
+    const label = started ? 'Open workflow' : 'Start working';
+    return `<article class="card jira-card">
+      <div class="meta"><span class="key">${esc(item.ticket)}</span>${pill(item.archived ? 'Archived' : item.running ? 'Running' : item.state)}</div>
+      <h3>${esc(item.title)}</h3>
+      <p>${esc(item.description)}</p>
+      <div class="meta">${item.repos.map(r => `<span class="pill">${esc(r)}</span>`).join('')}<span class="hint">${esc(item.kind)} · ${esc(item.assignee || 'unassigned')}</span></div>
+      <div class="foot"><span class="hint">${esc(started && !item.archived ? item.detail : '')}</span>
+        ${item.archived ? `<button class="btn subtle" data-restore-ticket="${esc(item.ticket)}" title="Bring this ticket back">Restore</button>`
+          : finished ? `<button class="btn" data-remove-ticket="${esc(item.ticket)}" title="Move this finished ticket to the archive">Archive</button>`
+          : `<button class="btn ${started ? '' : 'primary'}" data-jira="${esc(item.ticket)}">${label}</button>`}</div>
+    </article>`;
+  };
+  const done = i => i.state === 'Done';
+  const cols = [['Not started', i => !i.archived && !i.has_run], ['Running', i => !i.archived && i.has_run && !done(i)], ['Done', i => !i.archived && i.has_run && done(i)], ['Archived', i => i.archived]];
+  $('#jira-cards').className = 'jira-cols';
+  $('#jira-cards').innerHTML = items.length ? cols.map(([name, test]) => {
+    const list = items.filter(test);
+    return `<section class="jira-col"><h3><span>${name}</span><span>${list.length}</span></h3>${list.map(card).join('') || '<div class="hint" style="padding:4px 6px">Nothing here</div>'}</section>`;
+  }).join('') : `<div class="card empty" style="grid-column:1/-1">${jiraFilter === 'mine'
+      ? `No tickets are assigned to ${esc(jiraUser || 'you')}. <a href="#" data-filter-all="1">Show all tickets</a>.`
+      : 'No tickets on the board (config/backlog.yaml).'}</div>`;
 }
-function renderArchivedTickets() {
-  $('#archived-count').textContent = archivedTickets.length;
-  $('#archived-list').innerHTML = archivedTickets.length ? archivedTickets.map(ticket =>
-    `<div class="archived-entry"><span>${esc(ticket)}</span>
-      <button class="btn subtle" type="button" data-restore-ticket="${esc(ticket)}">Restore</button>
-    </div>`).join('') : '<div class="empty">No archived work items.</div>';
+async function openRuns() {   // entering the Ticket runs tab: show the selected run, or the first one
+  await refreshTickets().catch(error => console.error(error));
+  renderTickets();
+  if (selected) refreshStatus().catch(error => console.error(error));
+  refreshAuditor();
 }
-function setWorkItemsExpanded(expanded) {
-  $('#work-items-content').hidden = !expanded;
-  $('#ticket-panel-toggle').setAttribute('aria-expanded', String(expanded));
-  $('#ticket-panel-toggle').setAttribute('aria-label', `${expanded ? 'Collapse' : 'Expand'} work items panel`);
-  $('#ticket-panel-toggle-label').textContent = expanded ? 'Hide' : 'Show';
-  $('#ticket-panel-toggle-icon').textContent = expanded ? '‹' : '›';
-  $('.layout').classList.toggle('sidebar-collapsed', !expanded);
-  localStorage.setItem(WORK_ITEMS_EXPANDED_KEY, String(expanded));
-}
+const runsVisible = () => !$('#tab-workflow').hidden;
 function updateWorkflowStartButton() {
   const start = $('#start-workflow');
   const contextStatus = current?.artifacts?.['ticket-context.md']?.status;
@@ -269,11 +354,16 @@ function updateWorkflowStartButton() {
   const complete = current?.status === 'Done' || backlogItem?.state === 'Done';
   const archived = Boolean(backlogItem?.archived);
   const started = Boolean(backlogItem?.has_run || current);
+  document.querySelector('.run-live')?.classList.toggle('on', isRunning);
   start.disabled = !ticket || (!current && !backlogItem) || (!contextReady && !backlogItem) || isRunning || complete || archived;
+  const statusText = current?.status || backlogItem?.state || '';
+  start.dataset.mode = 'start';
+  start.classList.add('primary'); start.classList.remove('danger');
   start.textContent = archived ? 'Archived — restore first'
-    : isRunning ? 'Workflow running…'
-    : complete ? 'Workflow complete'
+    : isRunning ? (statusText || 'Running')
+    : complete ? (statusText || 'Done')
     : started ? 'Start / resume workflow' : 'Start workflow';
+  const stopBtn = $('#stop-workflow'); if (stopBtn) stopBtn.disabled = !isRunning || archived;
   start.title = !ticket
     ? 'Select a work item to start its workflow'
     : archived
@@ -281,7 +371,7 @@ function updateWorkflowStartButton() {
     : !contextReady && !backlogItem
       ? 'Fill ticket-context.md and mark it ready before starting the workflow'
       : isRunning
-        ? 'The workflow is already running for this work item'
+        ? 'The workflow is running; use Stop to halt it'
         : complete
           ? 'This workflow is already complete'
           : 'Start or resume all workflow workers for the selected work item';
@@ -294,51 +384,187 @@ function renderOverview(data) {
     <div class="hero-meta"><span class="pill">Derived status</span><span class="pill">${esc(status.run)} / current run</span><span class="pill">${Object.keys(status.artifacts || {}).length} artifacts tracked</span></div>
   </section>`;
 }
-function renderLanes(data) {
-  const lanes = Object.entries(data.lanes || {});
-  const laneHtml = lanes.length ? lanes.map(([key, lane]) =>
-    `<article class="lane" data-lane-node="${esc(key)}" style="--lane-color:${laneColors[key] || '#5b9dff'}">${renderLaneNodeContent(key, lane)}</article>`
-  ).join('') : '<div class="empty">Lane state is not available.</div>';
-  $('#board').innerHTML = `<div class="grid-head"><h2>Workflow lanes</h2><span class="hint">Ready means required inputs are present and not stale.</span></div><div class="lanes">${laneHtml}</div>
-    <section id="artifact-readiness">${renderArtifactFlow(data.artifacts || {})}</section>
+let HUB = null, hubSig = '';
+const TRI = (fill, stroke) => `<polygon points="-5,-4 5,0 -5,4" fill="${fill}" stroke="${stroke}" stroke-width="1.2" stroke-linejoin="round"/>`;
+function renderAgents(data) {
+  const swatch = (c, hollow) => `<svg width="30" height="10" viewBox="0 0 30 10" aria-hidden="true"><line x1="2" y1="5" x2="22" y2="5" stroke="${c}" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="0.1 6"${hollow ? ' opacity=".7"' : ''}/><polygon points="20,1.5 28,5 20,8.5" fill="${c}"/></svg>`;
+  $('#board').innerHTML = `<section id="artifact-readiness"><div class="grid-head"><div style="display:flex;align-items:center;gap:10px"><h2>Agents &amp; artifacts</h2><span class="run-live" data-run-log tabindex="0" title="Hover to read the live log"><i class="dot"></i>Live log</span></div><span class="hint">Drag anything to arrange it · hover or click a node to see its connections · <button class="btn subtle" id="hub-reset" type="button" style="padding:3px 10px;font-size:11px">Reset layout</button></span></div>
+    <div class="hub-legend"><span>${swatch('#41d392')}output: agent → artifact it creates</span><span>${swatch('#5b9dff')}input: artifact → agent that reads it</span><span>${swatch('#ffb454')}amber, pulsing: waiting for that artifact</span><span>moving dots: working · still: ready / done</span></div>
+    <div class="hub-viewport"><div class="hub" id="hub"></div></div></section>
     ${data.warnings?.length ? `<div class="grid-head"><h2>Attention</h2></div><div class="notice warn"><ul class="warning-list">${data.warnings.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>` : ''}`;
-  requestAnimationFrame(drawArtifactLinks);
+  hubSig = '';
+  renderHub(data);
 }
-function renderLaneNodeContent(key, lane) {
-  const repos = Object.entries(lane.repos || {});
-  const repoHtml = repos.map(([repo, item]) => `<div class="changes"><div class="lane-top"><span>${esc(repo)}</span>${pill(item.state)}</div><p>${esc(item.note || '')}</p></div>`).join('');
-  const canRun = (['ready','stale'].includes(lane.state) || lane.resumable) && !lane.unmet?.length
-    && (key !== 'dev' || Object.values(lane.repos || {}).some(repo => ['ready','stale'].includes(repo.state)));
-  const busy = activeJobs.some(job => job.ticket === selected && ['running','cancelling'].includes(job.status)
-    && ((job.action === 'worker' && job.lane === key) || (job.action === 'inspect-adapt' && key === 'inspect-adapt')));
-  const actionButton = (label, action, laneKey) => {
-    const indicator = busy ? '<span class="lane-busy">Working<span class="busy-dots" aria-label="In progress"><i></i><i></i><i></i></span></span>' : label;
-    return `<button class="btn" data-action="${esc(action)}" data-lane="${esc(laneKey)}"${busy ? ' disabled aria-busy="true"' : ''}>${indicator}</button>`;
+let hubPos = {}, hubFocus = {hover: null, pinned: null}, hubDrag = null;
+const hubPosKey = kind => `wf-hub-pos-v1:${kind || ''}`;
+function hubSavePos() { try { localStorage.setItem(hubPosKey(HUB?.kind), JSON.stringify(hubPos)); } catch {} }
+function renderHub(data) {
+  const hub = $('#hub');
+  if (!hub) return;
+  const agents = data.agents || {}, artifacts = data.artifacts || {};
+  const sig = JSON.stringify([data.ticket, data.run, agents, Object.entries(artifacts).map(([n, a]) => [n, a.status, a.reason])]);
+  if (sig === hubSig) return;     // nothing changed: keep the animations running smoothly
+  hubSig = sig;
+  const k = flowConfig?.summary?.kinds?.[data.kind] || {};
+  const owners = k.artifacts || {}, views = k.agent_views || {};
+  const names = Object.keys(artifacts);
+  try { hubPos = JSON.parse(localStorage.getItem(hubPosKey(data.kind)) || '{}'); } catch { hubPos = {}; }
+  HUB = {kind: data.kind, artifacts, req: Object.fromEntries(Object.keys(agents).map(key => [key, Object.fromEntries((views[key]?.requires || []).map(([a, st]) => [a, st]))])),
+    agents: Object.keys(agents).map(key => ({
+      key, agent: agents[key],
+      needs: (views[key]?.requires || []).map(([a]) => a).filter(a => names.includes(a)),
+      makes: names.filter(n => owners[n]?.owner === key || artifacts[n]?.owner === key)
+    }))};
+  const row = name => {
+    const art = artifacts[name] || {status:'missing'};
+    const label = art.per_repo ? `${name}/<repo>/` : name;
+    const text = !art.per_repo && current?.ticket ? `<a href="${esc(artifactUrl(name))}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>` : esc(label);
+    return `<div class="art-row ${stateClass(art.status)}" data-node="a:${esc(name)}" data-art="${esc(name)}" title="${esc(art.reason || art.status)}"><i class="dot"></i><span>${text}</span><span class="st">${esc(art.status)}</span></div>`;
   };
-  const inspectAdaptAction = key === 'inspect-adapt' && lane.state === 'stale' && !lane.unmet?.length
-    ? `<div style="margin-top:12px">${actionButton('Re-run Inspect & Adapt', 'inspect-adapt', key)}</div>`
-    : '';
-  return `<div class="lane-top"><h3>${esc(laneNames[key] || key)}</h3>${pill(lane.state)}</div>
-    <p>${esc(lane.note || (lane.unmet || []).join(' · ') || 'No additional notes.')}</p>${repoHtml}
-    ${canRun && key !== 'inspect-adapt'
-      ? `<div style="margin-top:12px">${actionButton(`${lane.resumable ? 'Resume' : 'Run'} ${laneNames[key] || key} worker`, 'worker', key)}</div>`
-      : inspectAdaptAction}`;
+  const agentHtml = HUB.agents.map(({key, agent, needs, makes}, i) => {
+    const repos = Object.entries(agent.repos || {}).map(([repo, item]) => `<div class="changes"><div class="agent-top"><span>${esc(repo)}</span>${pill(item.state)}</div></div>`).join('');
+    const fmt = list => list.map(n => esc(artifacts[n]?.per_repo ? `${n}/` : n)).join(', ') || '—';
+    return `<article class="agent" data-node="g:${esc(key)}" data-agent="${esc(key)}" style="--c:${agentColors[key] || PALETTE[i % PALETTE.length]}">
+      <h3>${esc(agentNames[key] || key)}</h3>
+      <div class="agent-status">${pill(agent.state).replace('<span class="status', `<span data-agent-node="${esc(key)}" class="status`)}<span class="agent-note">${esc(agent.note || (agent.unmet || []).join(' · ') || '')}</span></div>
+      <div class="agent-io"><div><b>needs</b>${fmt(needs)}</div><div><b>makes</b>${fmt(makes)}</div></div>${repos}</article>`;
+  }).join('');
+  hub.innerHTML = `<svg class="hub-links" aria-hidden="true"></svg>${names.map(row).join('')}${agentHtml}`;
+  layoutHub();
 }
-function updateLaneNodes(lanes) {
-  for (const [key, lane] of Object.entries(lanes || {})) {
-    const node = document.querySelector(`[data-lane-node="${CSS.escape(key)}"]`);
-    if (node) node.innerHTML = renderLaneNodeContent(key, lane);
+function hubNodes() { return [...document.querySelectorAll('#hub [data-node]')]; }
+function layoutHub() {      // default positions; anything the person dragged keeps its saved place
+  const hub = $('#hub');
+  if (!hub || !HUB) return;
+  const W = Math.max(920, hub.parentElement.clientWidth);
+  hub.style.width = W + 'px';
+  const arts = [...hub.querySelectorAll('.art-row')], agents = [...hub.querySelectorAll('.agent')];
+  const rowH = Math.max(40, ...arts.map(n => n.offsetHeight)) + 9, rowW = 230, GAP = 16, M = 30;
+  const aw = agents[0]?.offsetWidth || 210;
+  const sides = {L: [], R: []};
+  agents.forEach((n, i) => sides[i % 2 === 0 ? 'L' : 'R'].push(i));
+  const total = list => list.reduce((sum, i) => sum + agents[i].offsetHeight, 0) + GAP * Math.max(0, list.length - 1);
+  const H = Math.max(500, arts.length * rowH + 2 * M, total(sides.L) + 2 * M, total(sides.R) + 2 * M);
+  hub.style.height = H + 'px';
+  const cx = W / 2, cy = H / 2, def = {};
+  arts.forEach((n, i) => { def[n.dataset.node] = {x: cx, y: cy - arts.length * rowH / 2 + (i + .5) * rowH}; });
+  const gapX = Math.max(110, Math.min(200, (W - rowW) / 2 - aw - 24));
+  for (const side of ['L', 'R']) {
+    const order = sides[side].map(i => {
+      const e = HUB.agents[i], ys = [...e.needs, ...e.makes].map(a => def['a:' + a]?.y).filter(y => y != null);
+      return {i, want: ys.length ? ys.reduce((a, b) => a + b, 0) / ys.length : cy};
+    }).sort((p, q) => p.want - q.want);
+    let prevBottom = M - GAP;
+    order.forEach(o => { const h = agents[o.i].offsetHeight; o.y = Math.max(o.want, prevBottom + GAP + h / 2); prevBottom = o.y + h / 2; });
+    const over = prevBottom - (H - M);
+    if (over > 0) order.forEach(o => { o.y -= over; });
+    order.forEach(o => { def['g:' + HUB.agents[o.i].key] = {x: side === 'L' ? cx - rowW / 2 - gapX - aw / 2 : cx + rowW / 2 + gapX + aw / 2, y: o.y}; });
   }
+  hubNodes().forEach(n => {
+    const id = n.dataset.node, saved = hubPos[id];
+    let x = saved ? cx + saved.dx : def[id].x, y = saved ? cy + saved.dy : def[id].y;
+    x = Math.max(n.offsetWidth / 2 + 4, Math.min(W - n.offsetWidth / 2 - 4, x));
+    y = Math.max(n.offsetHeight / 2 + 4, Math.min(H - n.offsetHeight / 2 - 4, y));
+    n.style.left = x + 'px'; n.style.top = y + 'px';
+  });
+  drawHubLinks();
 }
-function hideLaneLog() {
-  clearTimeout(laneLogTimer);
-  clearTimeout(laneLogHideTimer);
-  laneLogRequest++;
-  hoveredLaneNode = null;
-  $('#lane-log-popover').hidden = true;
+function drawHubLinks() {
+  const hub = $('#hub');
+  if (!hub || !HUB) return;
+  const focus = hubDrag?.id || hubFocus.hover || hubFocus.pinned;
+  const el = id => hub.querySelector(`[data-node="${CSS.escape(id)}"]`);
+  const box = n => ({x: parseFloat(n.style.left), y: parseFloat(n.style.top), hw: n.offsetWidth / 2, hh: n.offsetHeight / 2});
+  const edge = (b, dx, dy, gap) => { const t = Math.min((b.hw + gap) / (Math.abs(dx) || 1e-6), (b.hh + gap) / (Math.abs(dy) || 1e-6)); return [b.x + dx * t, b.y + dy * t]; };
+  const AOK = (art, need) => art && (art.status === need || (need === 'ready' && ['ready','approved'].includes(art.status)) || (!need && ['ready','approved'].includes(art.status)));
+  const involved = new Set(focus ? [focus] : []);
+  let svg = '';
+  HUB.agents.forEach(entry => {
+    const gId = 'g:' + entry.key, gEl = el(gId);
+    if (!gEl) return;
+    const st = entry.agent.state, working = st === 'working', color = getComputedStyle(gEl).getPropertyValue('--c').trim() || '#5b9dff';
+    [...entry.needs.map(a => ({a, kind: 'need'})), ...entry.makes.map(a => ({a, kind: 'make'}))].forEach(({a: name, kind}) => {
+      const aId = 'a:' + name, aEl = el(aId);
+      if (!aEl || !(working || focus === gId || focus === aId)) return;      // only busy agents and the focused node draw connectors
+      involved.add(gId); involved.add(aId);
+      const G = box(gEl), A = box(aEl);
+      let dx = A.x - G.x, dy = A.y - G.y; const l = Math.hypot(dx, dy) || 1; dx /= l; dy /= l;
+      const P = edge(G, dx, dy, 7), Q = edge(A, -dx, -dy, 7);
+      const art = HUB.artifacts[name] || {status: 'missing'}, need = (HUB.req[entry.key] || {})[name];
+      let mode, col = kind === 'make' ? '#41d392' : '#5b9dff';      // output green, input blue
+      if (kind === 'make') mode = working ? 'flow' : (AOK(art) || art.status === 'draft') ? 'still' : 'idle';
+      else if (working) mode = 'flow';
+      else if (AOK(art, need)) mode = st === 'done' ? 'faint' : 'still';
+      else { mode = st === 'disabled' ? 'idle' : 'wait'; col = ['blocked','failed'].includes(st) ? '#ff6b7d' : '#ffb454'; }
+      svg += kind === 'make' ? hubAgent(P, Q, col, mode) : hubAgent(Q, P, col, mode);
+    });
+  });
+  hub.querySelector('.hub-links').innerHTML = svg;
+  hubNodes().forEach(n => {
+    n.classList.toggle('dim', Boolean(focus) && !involved.has(n.dataset.node));
+    n.classList.toggle('pinned', hubFocus.pinned === n.dataset.node);
+  });
 }
-function positionLaneLog(node) {
-  const popover = $('#lane-log-popover');
+function hubAgent(from, to, color, mode) {     // a dotted line; the dots march in the direction of the flow
+  const x1 = from[0].toFixed(1), y1 = from[1].toFixed(1), x2 = to[0].toFixed(1), y2 = to[1].toFixed(1);
+  const ang = Math.atan2(to[1] - from[1], to[0] - from[0]) * 180 / Math.PI;
+  const opacity = mode === 'faint' ? .3 : mode === 'idle' ? .22 : 1;
+  const march = mode === 'flow' ? '<animate attributeName="stroke-dashoffset" from="0" to="-16" dur="0.7s" repeatCount="indefinite"/>' : '';
+  const pulse = mode === 'wait' ? '<animate attributeName="opacity" values=".25;1;.25" dur="1.8s" repeatCount="indefinite"/>' : '';
+  return `<g opacity="${opacity}">${pulse}<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${color}" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="0.1 8">${march}</line>
+    <g transform="translate(${x2},${y2}) rotate(${ang.toFixed(1)})"><polygon points="-8,-4.5 0,0 -8,4.5" fill="${color}"/></g></g>`;
+}
+window.addEventListener('resize', () => requestAnimationFrame(layoutHub));
+document.addEventListener('pointerover', event => {      // hover a node: show its connectors
+  if (hubDrag) return;
+  const id = event.target.closest?.('#hub [data-node]')?.dataset.node || null;
+  if (id !== hubFocus.hover) { hubFocus.hover = id; drawHubLinks(); }
+});
+document.addEventListener('pointerdown', event => {      // drag a node anywhere on the canvas
+  const node = event.target.closest?.('#hub [data-node]');
+  if (!node || event.target.closest('a') || event.button !== 0) return;
+  hideAgentLog();
+  hubDrag = {id: node.dataset.node, node, x0: event.clientX, y0: event.clientY, left0: parseFloat(node.style.left), top0: parseFloat(node.style.top), moved: false};
+  node.setPointerCapture?.(event.pointerId);
+});
+document.addEventListener('pointermove', event => {
+  if (!hubDrag) return;
+  const d = hubDrag, hub = $('#hub');
+  const dx = event.clientX - d.x0, dy = event.clientY - d.y0;
+  if (!d.moved && Math.hypot(dx, dy) < 4) return;
+  if (!d.moved) { d.moved = true; d.node.classList.add('dragging'); hideAgentLog(); }
+  d.node.style.left = Math.max(d.node.offsetWidth / 2 + 4, Math.min(hub.offsetWidth - d.node.offsetWidth / 2 - 4, d.left0 + dx)) + 'px';
+  d.node.style.top = Math.max(d.node.offsetHeight / 2 + 4, Math.min(hub.offsetHeight - d.node.offsetHeight / 2 - 4, d.top0 + dy)) + 'px';
+  drawHubLinks();
+});
+function endHubDrag() {
+  if (!hubDrag) return;
+  const d = hubDrag; hubDrag = null;
+  d.node.classList.remove('dragging');
+  const hub = $('#hub');
+  if (d.moved) {
+    hubPos[d.id] = {dx: parseFloat(d.node.style.left) - hub.offsetWidth / 2, dy: parseFloat(d.node.style.top) - hub.offsetHeight / 2};
+    hubSavePos();
+  } else hubFocus.pinned = hubFocus.pinned === d.id ? null : d.id;      // a click pins / unpins the connectors
+  drawHubLinks();
+}
+document.addEventListener('pointerup', endHubDrag);
+document.addEventListener('pointercancel', endHubDrag);
+document.addEventListener('click', event => {
+  if (!event.target.closest?.('#hub-reset')) return;
+  try { localStorage.removeItem(hubPosKey(HUB?.kind)); } catch {}
+  hubPos = {}; hubFocus.pinned = null; layoutHub();
+});
+function hideAgentLog() {
+  clearInterval(agentLogPoll);
+  clearTimeout(agentLogTimer);
+  clearTimeout(agentLogHideTimer);
+  agentLogRequest++;
+  hoveredAgentNode = null;
+  $('#agent-log-popover').hidden = true;
+}
+function positionAgentLog(node) {
+  const popover = $('#agent-log-popover');
   const rect = node.getBoundingClientRect();
   const width = Math.min(1000, window.innerWidth - 32);
   popover.style.left = `${Math.max(16, Math.min(rect.left, window.innerWidth - width - 16))}px`;
@@ -348,161 +574,81 @@ function positionLaneLog(node) {
     : Math.max(12, rect.top - height - 8);
   popover.style.top = `${top}px`;
 }
-async function showLaneLog(node) {
+let logFollow = true, logIgnore = false, logLast = '', agentLogPoll = 0;
+function setLogText(text) {      // keep following the newest line, unless the reader scrolled up
+  const el = $('#agent-log-text');
+  if (text === logLast) return;
+  logLast = text;
+  const top = el.scrollTop;
+  logIgnore = true;
+  el.textContent = text;
+  el.scrollTop = logFollow ? el.scrollHeight : top;
+  requestAnimationFrame(() => requestAnimationFrame(() => { logIgnore = false; }));
+}
+$('#agent-log-text').addEventListener('scroll', () => {
+  if (logIgnore) return;
+  const el = $('#agent-log-text');
+  logFollow = el.scrollTop + el.clientHeight >= el.scrollHeight - 12;      // scrolled up: stop following; back at the bottom: follow again
+});
+async function showAgentLog(node) {
   if (!current || !selected || !node.isConnected) return;
-  const requestId = ++laneLogRequest;
-  const ticket = selected;
-  const run = current.run;
-  const lane = node.dataset.laneNode;
-  const popover = $('#lane-log-popover');
-  $('#lane-log-title').textContent = `${ticket} · ${laneNames[lane] || lane} · latest log`;
-  $('#lane-log-path').textContent = 'Loading…';
-  $('#lane-log-text').textContent = '';
+  const requestId = ++agentLogRequest;
+  const ticket = selected, run = current.run;
+  const isRun = node.dataset.runLog !== undefined, agent = node.dataset.agentNode;
+  const popover = $('#agent-log-popover');
+  $('#agent-log-title').textContent = isRun ? `${ticket} · live log (all agents)` : `${ticket} · ${agentNames[agent] || agent} · latest log`;
+  $('#agent-log-path').textContent = 'Loading…';
+  logFollow = true; logLast = '\u0000';
+  setLogText('');
   popover.hidden = false;
-  positionLaneLog(node);
-  try {
-    const query = new URLSearchParams({ticket, run:String(run), lane});
-    const data = await request(`/api/log?${query}`);
-    if (requestId !== laneLogRequest || hoveredLaneNode !== node || selected !== ticket || current?.run !== run) return;
-    $('#lane-log-path').textContent = data.path;
-    $('#lane-log-text').textContent = data.text;
-    const logText = $('#lane-log-text');
-    logText.scrollTop = logText.scrollHeight;
-    positionLaneLog(node);
-  } catch (error) {
-    if (requestId !== laneLogRequest || hoveredLaneNode !== node) return;
-    $('#lane-log-path').textContent = '';
-    $('#lane-log-text').textContent = error.message;
-    positionLaneLog(node);
-  }
+  positionAgentLog(node);
+  const load = async () => {
+    try {
+      const query = new URLSearchParams({ticket, run:String(run), ...(isRun ? {} : {agent})});
+      const data = await request(`${isRun ? '/api/runlog' : '/api/log'}?${query}`);
+      if (requestId !== agentLogRequest || hoveredAgentNode !== node || selected !== ticket) return;
+      $('#agent-log-path').textContent = data.path || '';
+      setLogText(data.text || '');
+    } catch (error) {
+      if (requestId !== agentLogRequest || hoveredAgentNode !== node) return;
+      $('#agent-log-path').textContent = '';
+      setLogText(error.message);
+    }
+  };
+  await load();
+  if (requestId !== agentLogRequest) return;
+  positionAgentLog(node);
+  clearInterval(agentLogPoll);
+  agentLogPoll = setInterval(() => { if (requestId !== agentLogRequest || popover.hidden) clearInterval(agentLogPoll); else load(); }, 1500);
 }
 document.addEventListener('pointerover', event => {
-  const node = event.target.closest?.('[data-lane-node]');
-  if (!node || node === hoveredLaneNode) return;
-  clearTimeout(laneLogHideTimer);
-  clearTimeout(laneLogTimer);
-  hoveredLaneNode = node;
-  laneLogTimer = setTimeout(() => showLaneLog(node), 220);
+  const node = event.target.closest?.('[data-agent-node],[data-run-log]');
+  if (!node || node === hoveredAgentNode) return;
+  clearTimeout(agentLogHideTimer);
+  clearTimeout(agentLogTimer);
+  hoveredAgentNode = node;
+  agentLogTimer = setTimeout(() => showAgentLog(node), 220);
 });
 document.addEventListener('pointerout', event => {
-  const node = event.target.closest?.('[data-lane-node]');
-  if (!node || node.contains(event.relatedTarget) || $('#lane-log-popover').contains(event.relatedTarget)) return;
-  clearTimeout(laneLogTimer);
-  laneLogHideTimer = setTimeout(() => {
-    if (!$('#lane-log-popover').matches(':hover')) hideLaneLog();
+  const node = event.target.closest?.('[data-agent-node],[data-run-log]');
+  if (!node || node.contains(event.relatedTarget) || $('#agent-log-popover').contains(event.relatedTarget)) return;
+  clearTimeout(agentLogTimer);
+  agentLogHideTimer = setTimeout(() => {
+    if (!$('#agent-log-popover').matches(':hover')) hideAgentLog();
   }, 140);
 });
-$('#lane-log-popover').addEventListener('pointerenter', () => clearTimeout(laneLogHideTimer));
-$('#lane-log-popover').addEventListener('pointerleave', () => {
-  laneLogHideTimer = setTimeout(() => {
-    if (!hoveredLaneNode?.matches(':hover')) hideLaneLog();
+$('#agent-log-popover').addEventListener('pointerenter', () => clearTimeout(agentLogHideTimer));
+$('#agent-log-popover').addEventListener('pointerleave', () => {
+  agentLogHideTimer = setTimeout(() => {
+    if (!hoveredAgentNode?.matches(':hover')) hideAgentLog();
   }, 140);
 });
-const ARTIFACT_FLOW = [
-  {from:'ticket-context.md',to:'spec.md'},
-  {from:'ticket-context.md',to:'design.md'},
-  {from:'spec.md',to:'design.md'},
-  {from:'ticket-context.md',to:'tasks.md'},
-  {from:'spec.md',to:'tasks.md'},
-  {from:'design.md',to:'tasks.md'},
-  {from:'spec.md',to:'test-plan.md'},
-  {from:'tasks.md',to:'test-plan.md'},
-  {from:'spec.md',to:'changes'},
-  {from:'design.md',to:'changes'},
-  {from:'tasks.md',to:'changes'},
-  {from:'test-plan.md',to:'verify-report.md'},
-  {from:'changes',to:'verify-report.md'},
-  {from:'test-plan.md',to:'review-report.md'},
-  {from:'changes',to:'review-report.md'},
-  {from:'review-report.md',to:'inspection-report.md'},
-  {from:'review-report.md',to:'acceptance-report.md'},
-  {from:'acceptance-report.md',to:'inspection-report.md'}
-];
-const ARTIFACT_POSITIONS = {
-  'ticket-context.md':[1,3], 'spec.md':[2,3], 'design.md':[3,2], 'tasks.md':[3,4],
-  'test-plan.md':[4,2], changes:[4,4], 'verify-report.md':[5,2], 'review-report.md':[5,4],
-  'inspection-report.md':[5,3], 'acceptance-report.md':[5,5]
-};
-function renderArtifactFlow(artifacts) {
-  const phases = [
-    ['Intake',1], ['Plan',2], ['Plan outputs',3], ['Build inputs',4], ['Review & learn',5]
-  ];
-  const nodes = Object.keys(ARTIFACT_POSITIONS).map(name => {
-    const artifact = artifacts[name] || {status:'missing',reason:null};
-    const [column,row] = ARTIFACT_POSITIONS[name];
-    return `<article class="artifact-node ${stateClass(artifact.status)}" data-artifact="${esc(name)}" style="grid-column:${column};grid-row:${row}">${renderArtifactNodeContent(name, artifact)}</article>`;
-  }).join('');
-  return `<div class="grid-head"><h2>Artifact readiness flow</h2><span class="hint">Arrows show input dependencies from workflow-design.md.</span></div>
-    <div class="hint" style="margin:-3px 2px 10px">Status colors: green ready/approved · purple draft · grey missing · amber stale · red rejected.</div>
-    <div class="artifact-flow-viewport"><div class="artifact-flow">
-      <svg class="artifact-links" aria-hidden="true"><defs><marker id="artifact-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#596486"/></marker></defs></svg>
-      ${phases.map(([label,column]) => `<div class="flow-phase" style="grid-column:${column};grid-row:1">${label}</div>`).join('')}
-      ${nodes}
-    </div></div>`;
-}
-function renderArtifactNodeContent(name, artifact) {
-    const repoEntries = name === 'changes' ? Object.entries(artifact.repos || {}) : [];
-    const repos = repoEntries.length
-      ? `<div class="artifact-repos">${repoEntries.map(([repo,value]) => `<div class="artifact-repo"><span>${esc(repo)}</span>${pill(value.status)}</div>`).join('')}</div>`
-      : '';
-    const label = name === 'changes' ? 'changes/<repo>/' : name;
-    const nameHtml = name !== 'changes' && current?.ticket
-      ? `<a class="artifact-name artifact-open-link" href="${esc(artifactUrl(name))}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>`
-      : `<span class="artifact-name">${esc(label)}</span>`;
-    return `<div class="artifact-node-head">${nameHtml}${pill(artifact.status)}</div>
-      ${artifact.reason ? `<div class="reason">${esc(artifact.reason)}</div>` : ''}${repos}`;
-}
 function artifactUrl(name) {
   const query = new URLSearchParams({ticket:current.ticket, run:String(current.run), name});
   return `/api/artifact?${query}`;
 }
-function updateArtifactNodes(artifacts) {
-  for (const name of Object.keys(ARTIFACT_POSITIONS)) {
-    const node = document.querySelector(`[data-artifact="${CSS.escape(name)}"]`);
-    if (!node) continue;
-    const artifact = artifacts[name] || {status:'missing',reason:null};
-    node.className = `artifact-node ${stateClass(artifact.status)}`;
-    node.innerHTML = renderArtifactNodeContent(name, artifact);
-  }
-}
-function drawArtifactLinks() {
-  const flow = document.querySelector('.artifact-flow');
-  if (!flow) return;
-  const svg = flow.querySelector('.artifact-links');
-  const defs = svg.querySelector('defs')?.outerHTML || '';
-  const bounds = flow.getBoundingClientRect();
-  const width = flow.scrollWidth, height = flow.scrollHeight;
-  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-  svg.setAttribute('width', width);
-  svg.setAttribute('height', height);
-  svg.innerHTML = defs + ARTIFACT_FLOW.map(({from,to}) => {
-    const source = flow.querySelector(`[data-artifact="${CSS.escape(from)}"]`);
-    const target = flow.querySelector(`[data-artifact="${CSS.escape(to)}"]`);
-    if (!source || !target) return '';
-    const a = source.getBoundingClientRect(), b = target.getBoundingClientRect();
-    const sameColumn = ARTIFACT_POSITIONS[from][0] === ARTIFACT_POSITIONS[to][0];
-    let x1, y1, x2, y2, curve;
-    if (sameColumn) {
-      const movingDown = ARTIFACT_POSITIONS[from][1] < ARTIFACT_POSITIONS[to][1];
-      x1 = a.left + a.width/2 - bounds.left;
-      y1 = (movingDown ? a.bottom : a.top) - bounds.top;
-      x2 = b.left + b.width/2 - bounds.left;
-      y2 = (movingDown ? b.top : b.bottom) - bounds.top;
-      const bend = Math.max(12, Math.abs(y2-y1)*.45);
-      curve = `M${x1},${y1} C${x1},${y1+(movingDown?bend:-bend)} ${x2},${y2-(movingDown?bend:-bend)} ${x2},${y2}`;
-    } else {
-      x1 = a.right - bounds.left; y1 = a.top + a.height/2 - bounds.top;
-      x2 = b.left - bounds.left; y2 = b.top + b.height/2 - bounds.top;
-      const bend = Math.max(18, (x2-x1)*.48);
-      curve = `M${x1},${y1} C${x1+bend},${y1} ${x2-bend},${y2} ${x2},${y2}`;
-    }
-    const status = stateClass(source.className.split(' ').find(name => name !== 'artifact-node') || 'missing');
-    return `<path class="artifact-link ${status}" d="${curve}"/>`;
-  }).join('');
-}
-window.addEventListener('resize', () => requestAnimationFrame(drawArtifactLinks));
 function renderActions(data) {
-  const s = data.status, gates = s.gates || {}, lanes = s.lanes || {};
+  const s = data.status, gates = s.gates || {}, agents = s.agents || {};
   const cards = [];
   const recommendations = s.next || [];
   const contextStatus = s.artifacts?.['ticket-context.md']?.status;
@@ -512,26 +658,27 @@ function renderActions(data) {
   }
   for (const [gate, info] of Object.entries(gates)) {
     if (info.state === 'awaiting_approval') {
-      const isPlan = gate === 'planner';
-      const title = isPlan ? 'Approve the plan' : 'Approve the risk-flagged review';
+      const def = gateDef(s.kind, gate) || {};
+      const isPlan = Boolean(def.feedback_to);
+      const title = `${agentNames[gate] || gate} gate${def.when === 'risk_flagged' ? ' (risk-flagged)' : ''}`;
       const command = `python scripts/wf_run.py approve --ticket ${s.ticket} --run ${s.run} --gate ${gate}`;
       const reasonId = `reject-reason-${gate}`;
       const rejectControls = `<label class="field-label" for="${reasonId}">Reason for rejection</label>
         <textarea class="field" id="${reasonId}" rows="2" maxlength="1000" placeholder="Explain what needs to change"></textarea>
-        ${button(isPlan ? 'Reject plan' : 'Reject review', 'reject', `data-gate="${esc(gate)}"`, 'danger')}`;
+        ${button('Reject', 'reject', `data-gate="${esc(gate)}"`, 'danger')}${isPlan ? `<div class="hint">The reason is written into ${esc(def.feedback_to)} and the agent redoes the work.</div>` : ''}`;
       cards.push(actionCard(title, `Review ${(info.artifacts || []).join(', ')}. Approval runs: ${command}`,
-        `<div class="form-row">${button(isPlan ? 'Approve plan' : 'Approve review', 'approve', `data-gate="${esc(gate)}"`, 'primary')}</div>${rejectControls}`));
+        `<div class="form-row">${button(`Approve ${(info.artifacts || []).join(', ')}`, 'approve', `data-gate="${esc(gate)}"`, 'primary')}</div>${rejectControls}`));
     }
   }
-  for (const [lane, info] of Object.entries(lanes)) {
+  for (const [agent, info] of Object.entries(agents)) {
     if (info.state === 'blocked') {
-      cards.push(actionCard(`Answer ${laneNames[lane] || lane}`, 'Enter the answer requested by this lane, then the worker can continue.',
-        `<label class="field-label" for="answer-${esc(lane)}">Answer</label><textarea class="field" id="answer-${esc(lane)}" rows="3" maxlength="5000" placeholder="Provide the decision or clarification"></textarea>${button('Submit answer', 'answer', `data-lane="${esc(lane)}"`)}`));
+      cards.push(actionCard(`Answer ${agentNames[agent] || agent}`, 'Enter the answer requested by this agent, then the worker can continue.',
+        `<label class="field-label" for="answer-${esc(agent)}">Answer</label><textarea class="field" id="answer-${esc(agent)}" rows="3" maxlength="5000" placeholder="Provide the decision or clarification"></textarea>${button('Submit answer', 'answer', `data-agent="${esc(agent)}"`)}`));
     }
   }
   if (s.status === 'Deploying') {
     const deployed = s.release?.repos || {};
-    let repos = Object.entries(lanes.dev?.repos || {}).filter(([repo]) => deployed[repo] !== 'deployed');
+    let repos = (s.repos || []).map(repo => [repo]).filter(([repo]) => deployed[repo] !== 'deployed');
     if (s.release?.deploy_order === 'ordered' && s.release?.sequence?.length) {
       const nextRepo = s.release.sequence.find(repo => deployed[repo] !== 'deployed');
       repos = repos.filter(([repo]) => repo === nextRepo);
@@ -547,61 +694,78 @@ function renderActions(data) {
     cards.push(actionCard('Accept the work item', `Confirm the deployed work is accepted. This records acceptance with: ${command}`,
       button('Accept ticket', 'accept', '', 'primary')));
   }
-  const recommendationHtml = recommendations.length
-    ? `<section class="recommendations"><h3>Recommended next steps <span class="hint">(based on the current workflow status)</span></h3>
-        ${confirmationMessage ? `<div class="notice">${esc(confirmationMessage)}</div>` : ''}
-        <ol>${recommendations.map(item => {
-          const text = item.text || '';
-          const commandAt = text.indexOf(': python scripts/');
-          const summary = commandAt < 0 ? text : text.slice(0, commandAt);
-          const command = commandAt < 0 ? '' : `<code class="command">${esc(text.slice(commandAt + 2))}</code>`;
-          const gateDecision = /approve --ticket .+--gate (planner|reviewer)/.test(text);
-          const confirm = item.who?.toLowerCase().startsWith('human') && !gateDecision
-            ? `<div style="margin-top:8px">${button('Confirm action complete & recheck', 'confirm-human', `data-confirm-text="${esc(text)}"`)}</div>`
-            : '';
-          return `<li><span class="who">${esc(item.who || 'next')}</span> ${esc(summary)}${command}${confirm}</li>`;
-        }).join('')}</ol>
-      </section>`
-    : `${confirmationMessage ? `<div class="notice">${esc(confirmationMessage)}</div>` : ''}<div class="notice">No further actions are recommended for this run.</div>`;
-  $('#action-area').innerHTML = `<div class="grid-head"><h2>Playbook controls</h2><span class="hint">Workflow status and artifact readiness refresh automatically.</span></div>
-    ${recommendationHtml}<div class="actions">${cards.join('')}</div>`;
+  const humanSteps = recommendations.filter(item => item.who?.toLowerCase().startsWith('human') && !/approve --ticket .+--gate /.test(item.text || ''));
+  const stepsHtml = humanSteps.length ? `<ol class="human-steps">${humanSteps.map(item => {
+    const text = item.text || '', commandAt = text.indexOf(': python scripts/');
+    const summary = commandAt < 0 ? text : text.slice(0, commandAt);
+    return `<li>${esc(summary)}<div style="margin-top:8px">${button('Confirm done & recheck', 'confirm-human', `data-confirm-text="${esc(text)}"`)}</div></li>`;
+  }).join('')}</ol>` : '';
+  const message = confirmationMessage ? `<div class="notice">${esc(confirmationMessage)}</div>` : '';
+  $('#action-area').innerHTML = (cards.length || stepsHtml || message)
+    ? `<div class="grid-head"><h2>Needs your decision</h2><span class="hint">Everything else runs on its own.</span></div>${message}${stepsHtml}<div class="actions">${cards.join('')}</div>`
+    : '';
   $('#action-area').querySelectorAll('[data-action]').forEach(el => el.addEventListener('click', () => performAction(el)));
 }
-function renderJobs() {
-  updateWorkflowStartButton();
-  const running = activeJobs.filter(job => ['running','cancelling'].includes(job.status));
-  const finished = activeJobs.filter(job => !['running','cancelling'].includes(job.status));
-  const renderJob = (job, canCancel) => `<article class="job"><div class="job-head"><strong>${esc(job.label)}</strong>${pill(job.status)}</div>
-    ${job.output ? `<pre class="joblog">${esc(job.output)}</pre>` : ''}
-    ${canCancel ? `<div class="job-actions">${button(job.status === 'cancelling' ? 'Cancelling…' : 'Cancel command', 'cancel', `data-cancel-job="${esc(job.id)}" ${job.status === 'cancelling' ? 'disabled' : ''}`, 'danger')}</div>` : ''}
+function renderJobs() { updateWorkflowStartButton(); }
+// ---------- the Auditor: one agent for all tickets, outside any ticket
+const AUDIT_STATE = {pending:'Waiting to audit', auditing:'Auditing…', audited:'Audited', failed:'Audit failed'};
+async function refreshAuditor() {
+  let data;
+  try { data = await request('/api/auditor'); }
+  catch (error) { $('#auditor').innerHTML = `<div class="notice error">Auditor: ${esc(error.message)}</div>`; return; }
+  const open = $('#auditor-output')?.open;
+  const state = !data.running ? 'Off' : data.auditing ? 'Auditing' : 'Watching';
+  const when = (data.audit_when || ['Done']).join(' or ');
+  const rows = data.tickets.map(item => {
+    const report = item.report ? `<a href="/api/audit?${new URLSearchParams({ticket:item.ticket, run:String(item.run)})}" target="_blank" rel="noopener noreferrer">View audit</a>` : '';
+    const again = ['audited','failed'].includes(item.state)
+      ? `<button class="btn subtle" data-audit-ticket="${esc(item.ticket)}" data-audit-run="${esc(item.run)}">Audit again</button>` : '';
+    return `<div class="audit-row"><strong>${esc(item.ticket)}</strong><span class="hint">run ${esc(item.run)} · ${esc(item.ticket_status)}</span>${pill(AUDIT_STATE[item.state] || item.state)}${report}${again}</div>`;
+  }).join('');
+  $('#auditor').innerHTML = `<article class="card auditor-card">
+    <div class="auditor-head"><h2>Auditor</h2><span class="hint">one agent for all tickets · audits each ticket once it is ${esc(when)}${data.running ? '' : data.auto_start ? '' : ' · starts when you press Start'}</span><span class="grow"></span>
+      ${pill(state)}${data.running ? '<button class="btn" data-auditor-stop="1">Stop</button>' : '<button class="btn primary" data-auditor-start="1">Start</button>'}<button class="btn subtle" data-auditor-settings="1">Settings</button></div>
+    <div class="audit-list">${rows || `<div class="hint">No ${esc(when)} tickets yet${data.not_done ? ` (${data.not_done} in progress)` : ''}.</div>`}</div>
+    ${data.auditing && data.live ? `<pre class="joblog">${esc(data.live)}</pre>` : ''}
+    ${data.output ? `<details id="auditor-output" ${open ? 'open' : ''}><summary class="hint">Auditor output</summary><pre class="joblog">${esc(data.output)}</pre></details>` : ''}
   </article>`;
-  $('#job-area').innerHTML = `${running.length ? `<div class="grid-head"><h2>Running command</h2><span class="hint">Cancel stops this command and its child processes.</span></div>
-    <div class="jobs">${running.map(job => renderJob(job, true)).join('')}</div>` : ''}
-    ${finished.length ? `<details class="history"><summary>Command history · ${finished.length}</summary>
-      <div class="jobs">${finished.map(job => renderJob(job, false)).join('')}</div></details>` : ''}`;
-  $('#job-area').querySelectorAll('[data-cancel-job]').forEach(el => el.addEventListener('click', () => cancelJob(el)));
 }
+async function auditorAction(body) {
+  try { await request('/api/action', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)}); }
+  catch (error) { alert(error.message); }
+  setTimeout(refreshAuditor, 600);
+}
+$('#auditor').addEventListener('click', event => {
+  if (event.target.closest('[data-auditor-settings]')) { showTab('config', 'auditor'); return; }
+  const el = event.target.closest('[data-auditor-start],[data-auditor-stop],[data-audit-ticket]');
+  if (!el) return;
+  el.disabled = true;
+  if (el.dataset.auditorStart) auditorAction({action:'auditor-start'});
+  else if (el.dataset.auditorStop) auditorAction({action:'auditor-stop'});
+  else auditorAction({action:'auditor-audit', ticket:el.dataset.auditTicket, run:Number(el.dataset.auditRun)});
+});
+
 async function refreshTickets() {
   const [data, backlog, archived] = await Promise.all([
     request('/api/tickets'),
     request('/api/backlog'),
     request('/api/archived')
   ]);
-  knownTickets = data.tickets || [];
+  knownTickets = (data.tickets || []).filter(t => t.status !== 'Done');   // finished tickets leave the Ticket runs tab
   backlogTickets = backlog.tickets || [];
+  jiraUser = backlog.user || '';
   archivedTickets = archived.tickets || [];
   renderTickets();
   renderBacklog();
-  renderArchivedTickets();
-  if (!selected && knownTickets.length) selected = knownTickets[0].ticket;
+  if (knownTickets.length && !knownTickets.some(t => t.ticket === selected)) selected = knownTickets[0].ticket;
 }
 async function refreshStatus() {
-  if (current && current.ticket !== selected) hideLaneLog();
+  if (current && current.ticket !== selected) hideAgentLog();
   if (!selected) {
     current = null;
-    hideLaneLog();
+    hideAgentLog();
     updateWorkflowStartButton();
-    $('#overview').innerHTML = '<section class="card empty"><h1>Choose or create a work item</h1><p>The playbook will show lane readiness, artifact status and the next available actions.</p></section>';
+    $('#overview').innerHTML = '<section class="card empty"><h1>Choose or create a work item</h1><p>The playbook will show agent readiness, artifact status and the next available actions.</p></section>';
     $('#board').innerHTML = '';
     $('#action-area').innerHTML = '';
     return;
@@ -632,7 +796,7 @@ async function refreshStatus() {
   current = data.status;
   updateWorkflowStartButton();
   renderOverview(data);
-  renderLanes(current);
+  renderAgents(current);
   renderActions(data);
   renderTickets();
 }
@@ -654,10 +818,8 @@ async function refreshArtifactReadiness() {
     if (response && $('#artifact-readiness')) {
       current = response.status;
       updateWorkflowStartButton();
-      updateLaneNodes(current.lanes);
-      updateArtifactNodes(current.artifacts || {});
+      renderHub(current);
       $('#artifact-refresh-error')?.remove();
-      requestAnimationFrame(drawArtifactLinks);
     }
   } catch (error) {
     const currentSection = $('#artifact-readiness');
@@ -676,11 +838,7 @@ async function refreshArtifactReadiness() {
 async function refresh() {
   try {
     await refreshTickets();
-    if (localStorage.getItem(WORK_ITEMS_EXPANDED_KEY) === null) {
-      setWorkItemsExpanded(knownTickets.length > 0 || backlogTickets.length > 0);
-    }
-    await refreshStatus();
-    $('#ticket-count').title = 'Status refreshed';
+    if (runsVisible()) await refreshStatus();
   } catch (error) {
     $('#overview').innerHTML = `<div class="notice error">${esc(error.message)}</div>`;
   }
@@ -712,8 +870,7 @@ async function performAction(buttonEl) {
   if (!current && buttonEl.dataset.action !== 'create') return;
   const action = {action:buttonEl.dataset.action, ticket:current?.ticket};
   if (current) action.run = current.run;
-  if (action.action === 'worker') action.lane = buttonEl.dataset.lane;
-  if (action.action === 'inspect-adapt') action.lane = buttonEl.dataset.lane;
+  if (action.action === 'worker') action.agent = buttonEl.dataset.agent;
   if (action.action === 'approve') action.gate = buttonEl.dataset.gate;
   if (action.action === 'reject') {
     action.gate = buttonEl.dataset.gate;
@@ -722,31 +879,30 @@ async function performAction(buttonEl) {
   }
   if (action.action === 'deployed') action.repo = buttonEl.dataset.repo;
   if (action.action === 'answer') {
-    action.lane = buttonEl.dataset.lane;
-    action.text = $(`#answer-${CSS.escape(action.lane)}`).value;
+    action.agent = buttonEl.dataset.agent;
+    action.text = $(`#answer-${CSS.escape(action.agent)}`).value;
     if (!action.text.trim()) { alert('Enter an answer before submitting.'); return; }
   }
   const originalLabel = buttonEl.innerHTML;
   buttonEl.disabled = true;
-  if (['worker','inspect-adapt'].includes(action.action)) {
+  if (action.action === 'worker') {
     buttonEl.setAttribute('aria-busy', 'true');
-    buttonEl.innerHTML = '<span class="lane-busy">Working<span class="busy-dots" aria-label="In progress"><i></i><i></i><i></i></span></span>';
+    buttonEl.innerHTML = '<span class="agent-busy">Working<span class="busy-dots" aria-label="In progress"><i></i><i></i><i></i></span></span>';
   }
   try {
     const result = await request('/api/action', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(action)});
     activeJobs.unshift({
       id:result.job, label:result.label, ticket:current.ticket, action:action.action,
-      lane:action.lane,
+      agent:action.agent,
       gate:action.gate, reason:action.reason, restarts_workflow:result.restarts_workflow,
       triggerAction:action.action,
       status:'running', output:''
     });
-    updateLaneNodes(current.lanes);
-    if (action.action === 'reject' && action.gate === 'planner') {
-      confirmationMessage = `Plan rejection submitted. ticket-context.md is being updated with your feedback. ${
+    if (action.action === 'reject' && gateDef(current?.kind, action.gate)?.feedback_to) {
+      confirmationMessage = `Rejection submitted. ${gateDef(current?.kind, action.gate).feedback_to} is being updated with your feedback. ${
         result.restarts_workflow
           ? 'Workflow workers will restart after the update.'
-          : 'The active workflow will pick up the Planner rework after the update.'
+          : `The active workflow will pick up the ${agentNames[action.gate] || action.gate} rework after the update.`
       }`;
     }
     renderJobs();
@@ -799,7 +955,7 @@ async function startBacklogWorkflow(ticket, buttonEl) {
       body:JSON.stringify({action:'start-from-backlog', ticket})
     });
     selected = ticket;
-    history.replaceState(null, '', `?ticket=${encodeURIComponent(ticket)}`);
+    history.replaceState(null, '', `?ticket=${encodeURIComponent(ticket)}#workflow`);
     activeJobs.unshift({
       id:result.job, label:result.label, ticket, action:'start', status:'running', output:''
     });
@@ -817,10 +973,11 @@ async function watchJob(id) {
     const job = activeJobs.find(item => item.id === id);
     if (job) Object.assign(job, data.job);
     renderJobs();
-    if (current && job?.ticket === selected) updateLaneNodes(current.lanes);
+
     if (['running','cancelling'].includes(job?.status)) setTimeout(() => watchJob(id), 1200);
     else {
-      if (job?.triggerAction === 'reject' && job.gate === 'planner') {
+      if (job && job.status === 'failed' && job.triggerAction !== 'reject') confirmationMessage = `${job.label} failed: ${(job.output || '').slice(-600) || 'no output'}`;
+      if (job?.triggerAction === 'reject' && gateDef(current?.kind, job.gate)?.feedback_to) {
         confirmationMessage = job.status === 'succeeded'
           ? `Plan rejected. ticket-context.md was updated with your feedback. ${
             job.restarts_workflow
@@ -850,33 +1007,52 @@ async function cancelJob(buttonEl) {
     buttonEl.disabled = false;
   }
 }
-$('#ticket-list').addEventListener('click', event => {
-  const remove = event.target.closest('[data-remove-ticket]');
-  if (remove) {
-    removeWorkItem(remove.dataset.removeTicket);
-    return;
-  }
-  const item = event.target.closest('[data-ticket]');
-  if (!item) return;
-  selected = item.dataset.ticket;
-  history.replaceState(null, '', `?ticket=${encodeURIComponent(selected)}`);
+$('#run-tabs').addEventListener('click', event => {
+  const tab = event.target.closest('[data-ticket]');
+  if (!tab) return;
+  selected = tab.dataset.ticket;
+  history.replaceState(null, '', `?ticket=${encodeURIComponent(selected)}#workflow`);
+  renderTickets();
   refreshStatus();
 });
-$('#backlog-list').addEventListener('click', event => {
-  const item = event.target.closest('[data-backlog-ticket]');
-  if (!item) return;
-  selected = item.dataset.backlogTicket;
-  history.replaceState(null, '', `?ticket=${encodeURIComponent(selected)}`);
-  refreshStatus();
+$('#stop-workflow').addEventListener('click', () => {
+  if (!selected) return;
+  $('#stop-workflow').disabled = true;
+  request('/api/action', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'stop-workflow', ticket:selected})})
+    .catch(error => alert(error.message)).finally(() => setTimeout(() => refresh(), 1200));
 });
-$('#archived-list').addEventListener('click', event => {
-  const restore = event.target.closest('[data-restore-ticket]');
-  if (restore) restoreWorkItem(restore.dataset.restoreTicket);
+$('#jira-filter').addEventListener('click', event => {
+  const b = event.target.closest('[data-filter]'); if (!b) return;
+  jiraFilter = b.dataset.filter; renderBacklog();
 });
-$('#ticket-panel-toggle').addEventListener('click', () => {
-  setWorkItemsExpanded($('#work-items-content').hidden);
+$('#jira-cards').addEventListener('click', async event => {
+  if (event.target.closest('[data-filter-all]')) { event.preventDefault(); jiraFilter = 'all'; renderBacklog(); return; }
+  const rm = event.target.closest('[data-remove-ticket]'); if (rm) { removeWorkItem(rm.dataset.removeTicket); return; }
+  const rs = event.target.closest('[data-restore-ticket]'); if (rs) { restoreWorkItem(rs.dataset.restoreTicket); return; }
+  const b = event.target.closest('[data-jira]'); if (!b) return;
+  const item = backlogTickets.find(x => x.ticket === b.dataset.jira);
+  selected = b.dataset.jira;
+  history.replaceState(null, '', `?ticket=${encodeURIComponent(selected)}#workflow`);
+  showTab('workflow');
+  if (item && !item.has_run && !item.running) await startBacklogWorkflow(selected, b);
+  else refreshStatus();
 });
-$('#refresh').addEventListener('click', refreshArtifactReadiness);
+// ---------- tabs
+function showTab(name, anchor = '') {
+  if (!['jira','workflow','config'].includes(name)) name = 'jira';
+  document.querySelectorAll('.tabbar [data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
+  $('#tab-jira').hidden = name !== 'jira';
+  $('#tab-workflow').hidden = name !== 'workflow';
+  $('#tab-config').hidden = name !== 'config';
+  const frame = $('#config-frame');
+  if (name === 'config' && (!frame.src || anchor)) frame.src = `/config?embedded=1${anchor ? '#' + anchor : ''}`;
+  if (name === 'workflow') { loadConfig().then(openRuns).catch(error => console.error(error)); }
+  if (location.hash !== `#${name}`) history.replaceState(null, '', `${location.search}#${name}`);
+}
+$('.tabbar').addEventListener('click', event => { const b = event.target.closest('[data-tab]'); if (b) showTab(b.dataset.tab); });
+window.addEventListener('message', event => {   // the Configuration tab saved: the agents may have changed
+  if (event.origin === location.origin && event.data?.type === 'config-saved') loadConfig().then(() => { if (runsVisible()) refreshStatus(); }).catch(() => {});
+});
 $('#board').addEventListener('click', event => {
   const action = event.target.closest('[data-action]');
   if (action) performAction(action);
@@ -890,26 +1066,13 @@ $('#start-workflow').addEventListener('click', () => {
     performAction($('#start-workflow'));
   }
 });
-$('#create-form').addEventListener('submit', async event => {
-  event.preventDefault();
-  const form = event.currentTarget;
-  const ticket = $('#new-ticket').value.trim(), kind = $('#new-kind').value;
-  const submit = form.querySelector('button[type="submit"]');
-  submit.disabled = true;
-  try {
-    const result = await request('/api/action', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'create', ticket, kind})});
-    selected = ticket;
-    history.replaceState(null, '', `?ticket=${encodeURIComponent(ticket)}`);
-    activeJobs.unshift({id:result.job, label:`Create ${ticket}`, ticket, action:'create', status:'running', output:''});
-    renderJobs();
-    watchJob(result.job);
-    form.reset();
-  } catch (error) { alert(error.message); }
-  finally { submit.disabled = false; }
-});
-refresh();
-setInterval(() => refreshArtifactReadiness(), 5000);
+loadConfig().catch(error => console.error(error)).finally(() => refresh());
+showTab(location.hash.slice(1) || (new URLSearchParams(location.search).get('ticket') ? 'workflow' : 'jira'));
+refreshAuditor();
+setInterval(refreshAuditor, 5000);
+setInterval(() => { if (runsVisible() && selected) refreshArtifactReadiness(); }, 5000);
 setInterval(() => refreshTickets().catch(error => console.error(error)), 30000);
+setInterval(() => { if (runsVisible()) refreshTickets().catch(() => {}); }, 5000);
 </script>
 </body>
 </html>

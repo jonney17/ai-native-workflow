@@ -3,7 +3,7 @@
 
   python demo/demo.py setup  [--workspace PATH]   build a fresh workspace (default demo/workspace, git-ignored)
   python demo/demo.py sync   [--workspace PATH]   copy the project's current config, skills, scripts and agents into it
-  python demo/demo.py auto   [--workspace PATH]   fresh workspace, then one trigger: stub agents, a fake human at the gates
+  python demo/demo.py auto   [--workspace PATH]   fresh workspace, then one trigger: stub agents, a fake human at the gates, then one Auditor pass
 
 To use the real Copilot agents instead, run in the workspace:
   python scripts/wf_run.py start --ticket DEMO-1 --verbose
@@ -96,7 +96,11 @@ def main():
     if args.command == "auto":
         env = {**os.environ, "WF_AGENT_CMD": '["%s", "%s"]' % (PY.replace("\\", "\\\\"), str(HERE / "stub_agent.py").replace("\\", "\\\\")),
                "WF_ACP_CMD": '["%s", "%s"]' % (PY.replace("\\", "\\\\"), str(HERE / "stub_acp.py").replace("\\", "\\\\")), "DEMO_PACE": "1"}
-        sys.exit(subprocess.call([PY, "scripts/wf_run.py", "start", "--ticket", TICKET, "--auto-approve"], cwd=str(ws), env=env))
+        code = subprocess.call([PY, "scripts/wf_run.py", "start", "--ticket", TICKET, "--auto-approve"], cwd=str(ws), env=env)
+        if code == 0:   # the ticket is Done: one pass of the team's Auditor (in real use it keeps watching)
+            print("\nAuditor: one pass over the finished tickets")
+            code = subprocess.call([PY, "scripts/wf_audit.py", "watch", "--once"], cwd=str(ws), env=env)
+        sys.exit(code)
     print(f"Next, from {ws}:\n  python scripts/wf_run.py start --ticket {TICKET} --verbose")
 
 
